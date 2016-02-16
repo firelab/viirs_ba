@@ -65,62 +65,13 @@ import glob
 import numpy as np
 import h5py
 import psycopg2
-# import arcpy
 import time
 import gc
 import subprocess
 import viirs_config as vc
 from pyhdf.SD import SD, SDC
 
-# The function array2raster uses arcpy to output a raster from the VIIRS array.
-# This function DOES NOT handle the pixel size properly. The output is NOT
-# properly aligned in space. These rasters are for testing only.
-def array2raster(config, array, lat, lon, OutRaster):
-    array  = np.fliplr(np.flipud(array))
-    lat = np.fliplr(np.flipud(lat))
-    lon = np.fliplr(np.flipud(lon))
-    OutRaster = OutRaster + ".tif"
-    if os.path.exists(os.path.join(config.BaseDir, "tiffs", OutRaster)):
-        os.remove(os.path.join(config.BaseDir,  "tiffs",OutRaster))
-    cellSize = 1
-    LLlat = float(lat[lat.shape[0]-1, 0])
-    LLlon = float(lon[lon.shape[0]-1, 0])
-    print "LLlat:", LLlat
-    print "LLlon:", LLlon
 
-    tempRaster = arcpy.NumPyArrayToRaster(array, arcpy.Point(LLlon, LLlat),cellSize, cellSize)
-    tempRaster.save(os.path.join(config.BaseDir,  "tiffs",OutRaster))
-    del tempRaster
-    array = None
-    lat = None
-    lon = None
-    del array
-    del lat
-    del lon
-
-
-# Output to shapefile    
-# def out_to_shapefile(list, fileName, date):
-    # shp_file = fileName +'.shp'
-    # # Check for pre-existing shape, delete if necessary.
-    # if os.path.exists(os.path.join(BaseDir, shp_file)):
-        # arcpy.Delete_management(os.path.join(BaseDir, shp_file))
-    # # Set up parameters and delete create shapefile.    
-    # geometry_type = "POINT"
-    # spatial = """GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]"""
-    # arcpy.CreateFeatureclass_management(BaseDir, shp_file, geometry_type, "", "Disabled", "Disabled", spatial)
-    # # Add attributes
-    # shp_file = os.path.join(BaseDir, shp_file)
-    # arcpy.AddField_management(shp_file, "Lat", "FLOAT")
-    # arcpy.AddField_management(shp_file, "Lon", "FLOAT")
-    # arcpy.AddField_management(shp_file, "Date", "DATE")
-    # # Set up cursor and loop through list adding rows.
-    # cursor = arcpy.da.InsertCursor(shp_file, ["Lat", "Lon", "Date", "SHAPE@XY"])
-    # for coord in list:
-        # row = [coord[0], coord[1], date, (coord[1], coord[0])]
-        # cursor.insertRow(row)
-    # del cursor
-    
 
 # Prints the contents of an h5.
 def print_name(name):
@@ -392,13 +343,6 @@ def run(config):
         # Print h5 contents
         ##GeoHdf.visit(print_name)
         ##M08Hdf.visit(print_name)
-        # Output rasters from arrays 
-        # The following should be uncommented if rasters are needed for testing.
-        ##array2raster(config, M07ReflArray, LatArray, LonArray, "M07Refl")
-        ##array2raster(config,M08ReflArray, LatArray, LonArray, "M08Refl")
-        ##array2raster(config,M10ReflArray, LatArray, LonArray, "M10Refl")
-        ##array2raster(config,M11ReflArray, LatArray, LonArray, "M11Refl")
-        ##array2raster(config,AfArray, LatArray, LonArray, "ActiveFire")
         
         # Correct reflectance values by applying scale factors
         M07ReflArray = M07ReflArray*M07ReflFact[0] + M07ReflFact[1]
@@ -624,6 +568,7 @@ def run(config):
         print command
         subprocess.call(command, shell = True)
         shutil.copy2(IniFile, os.path.join(config.ShapePath, os.path.basename(IniFile + '_'+ datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))))     
+
     end_group = datetime.datetime.now()
     print end_group.strftime("%Y%m%d %H:%M:%S")
     print "Elapsed time for group:", (end_group - start_group).total_seconds(), "seconds"
@@ -632,6 +577,7 @@ def run(config):
     print "Done"
     
 ################################################################################
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
