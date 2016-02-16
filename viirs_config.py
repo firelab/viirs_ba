@@ -20,11 +20,12 @@ from collections import namedtuple
 from ConfigParser import ConfigParser
 import os.path
 
-vector_param_names = ['BaseDir', 'M07UB', 'M08LB', 'M08UB', 
+
+vector_param_names = ['M07UB', 'M08LB', 'M08UB', 
                       'M10LB', 'M10UB', 'M11LB', 
                       'RthSub', 'Rth', 'RthLB', 'MaxSolZen',
                       'TemporalProximity', 'SpatialProximity']
-ThresholdVector = namedtuple('ThresholdVector', vector_param_names )
+ConfigVector = namedtuple('ConfigVector', vector_param_names )
                   
 class VIIRSConfig (object) : 
     @classmethod
@@ -37,15 +38,19 @@ class VIIRSConfig (object) :
         merged = cls()
         
         # copy the fixed values
-        merged.TextFile      = template.TextFile
-        merged.PostGIS       = template.PostGIS
-        merged.Shapefile     = template.Shapefile
-        merged.PostgresqlBin = template.PostgresqlBin
-        merged.DataBaseName  = template.DataBaseName
-        merged.UserName      = template.UserName
-        merged.password      = template.password
+        merged.TextOut       = template.TextOut
+        merged.ShapeOut      = template.ShapeOut
+        merged.DatabaseOut   = template.DatabaseOut
+        merged.PostBin       = template.PostBin
+        
+        merged.DBname        = template.DBname
+        merged.DBuser        = template.DBuser
+        merged.pwd           = template.pwd
+        
         merged.ImageDates    = template.ImageDates
-        merged.BaseDirectory = template.BaseDirectory
+        merged.BaseDir       = template.BaseDir
+        merged.use375af      = template.use375af
+        merged.use750af      = template.use750af
         
         # merge in the vector data
         for p in vector_param_names : 
@@ -54,7 +59,8 @@ class VIIRSConfig (object) :
         # handle changes
         run_id             = cls.create_run_id(merged)
         merged.run_id      = run_id
-        merged.OutShapeDir = merged.perturb_dir(template.OutShapeDir)
+        merged.ShapePath = merged.perturb_dir(template.ShapePath)
+        
         
         return merged
         
@@ -63,6 +69,7 @@ class VIIRSConfig (object) :
         """Loads an ini file and creates a configuration object"""
         ini = ConfigParser() 
         ini.read(filename)
+        # copy the fixed values
         
         target = cls()
         target.BaseDir = ini.get("InDirectory", "BaseDirectory")
@@ -93,9 +100,9 @@ class VIIRSConfig (object) :
         
         target.ImageDates = ini.get("ImageDates", "ImageDates")
         
-        target.DataBaseName = ini.get("DataBaseInfo", "DataBaseName")
-        target.UserName = ini.get("DataBaseInfo", "UserName")
-        target.password = ini.get("DataBaseInfo", "password")
+        target.DBname = ini.get("DataBaseInfo", "DataBaseName")
+        target.DBuser = ini.get("DataBaseInfo", "UserName")
+        target.pwd = ini.get("DataBaseInfo", "password")
         
         target.run_id = cls.create_run_id(target)
         
@@ -152,9 +159,9 @@ class VIIRSConfig (object) :
         
         ini.set("ImageDates", "ImageDates", self.ImageDates)
         
-        ini.set("DataBaseInfo", "DataBaseName", self.DataBaseName)
-        ini.set("DataBaseInfo", "UserName", self.UserName)
-        ini.set("DataBaseInfo", "password", self.password)
+        ini.set("DataBaseInfo", "DataBaseName", self.DBname)
+        ini.set("DataBaseInfo", "UserName", self.DBuser)
+        ini.set("DataBaseInfo", "password", self.pwd)
         
         return ini
         
@@ -173,7 +180,7 @@ class VIIRSConfig (object) :
         params_dict = {} 
         for p in vector_param_names :
             params_dict[p] = getattr(self, p)
-        return ThresholdVector(**params_dict) 
+        return ConfigVector(**params_dict) 
         
 class SequentialVIIRSConfig (VIIRSConfig) : 
     _run = 0 
