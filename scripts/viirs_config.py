@@ -45,6 +45,7 @@ class VIIRSConfig (object) :
         
         merged.DBname        = template.DBname
         merged.DBuser        = template.DBuser
+        merged.DBschema      = template.DBschema
         merged.pwd           = template.pwd
         
         merged.ImageDates    = template.ImageDates
@@ -102,6 +103,7 @@ class VIIRSConfig (object) :
         
         target.DBname = ini.get("DataBaseInfo", "DataBaseName")
         target.DBuser = ini.get("DataBaseInfo", "UserName")
+        target.DBschema = ini.get("DataBaseInfo", "Schema")
         target.pwd = ini.get("DataBaseInfo", "password")
         
         target.run_id = cls.create_run_id(target)
@@ -161,6 +163,7 @@ class VIIRSConfig (object) :
         
         ini.set("DataBaseInfo", "DataBaseName", self.DBname)
         ini.set("DataBaseInfo", "UserName", self.DBuser)
+        ini.set("DataBaseInfo", "Schema", self.DBschema)
         ini.set("DataBaseInfo", "password", self.pwd)
         
         return ini
