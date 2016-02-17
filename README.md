@@ -13,6 +13,13 @@ A PostGIS database stores the point data generated from the VIIRS imagery thresh
 
 **Fire_collection**: an entry in the fire_collections table that groups fire_events (individual pixels) into individual fires through the use of the foreign key found in fire_collections (join on fire_events.collection_id = fire_collections.fid). 
 
+### Database Setup
+The database consists of four tables:
+*	**active_fire**: fire detections import from the AVAFO dataset (EPSG: 4326)
+*	**thresholded_burn**: pixels that met the thresholding criteria to be preliminarily designated as “burned area” (EPSG: 4326)
+*	**fire_events**: all active_fire records and those thresholded_burn records that pass the spatial and temporal proximity thresholds (EPSG: 102008)
+*	**fire_collections**: table of foreign keys used to group fire_events into individual fires (EPSG: 102008)
+
 ## Process
 
 All processing is initiated and controlled by the python script VIIRS_threshold_reflCor_Bulk.py. On execution, the script:
