@@ -7,7 +7,7 @@ BaseDir = 'G:/VIIRS_calibration_data'
 # deleteDir = 'G:/store'
 # for SVM07 in glob.glob(os.path.join(BaseDir, "SVM07_npp_d20130917_t2138003_e2149450_b00001_c20150911174317383000_all-_dev.h5")):
 # prefix = ["AVAFO", "GMTCO", "SVM07", "SVM08", "SVM10", "SVM11"]
-prefix = ["AVAFO", "GMTCO", "SVM08", "SVM10", "SVM11"]
+prefix = ["VF375", "AVAFO", "GITCO", "GMTCO", "SVM10", "SVM11", "SVM08"]
 count = 0
 for SVM07 in glob.glob(os.path.join(BaseDir, "SVM07_npp_d????????_t???????_e???????_b00001_c????????????????????_all-_dev.h5")):
     # print SVM07
