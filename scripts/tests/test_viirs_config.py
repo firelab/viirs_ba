@@ -18,7 +18,7 @@ class TestVIIRSConfig (unittest.TestCase) :
                      'M10LB','M10UB','M11LB','RthSub','Rth','RthLB','MaxSolZen',
                      'TemporalProximity', 'SpatialProximity','TextOut','ShapeOut',
                      'DatabaseOut','ShapePath','PostBin','ImageDates','DBname',
-                     'DBuser','pwd', 'DBhost']
+                     'DBuser','pwd', 'DBhost', 'DBschema']
     def setUp(self) :
         # a clearly fake configuration which has unique values for each parameter 
         self.BaseDir = "TESTING" 
@@ -48,6 +48,7 @@ class TestVIIRSConfig (unittest.TestCase) :
         self.DBname = 'no data here'
         self.DBuser = 'happy gilmore'
         self.DBhost = 'all your data are belong to me'
+        self.DBschema = 'data go here. now.'
         self.pwd = 'mine all mine'
         
          
@@ -92,6 +93,7 @@ class TestVIIRSConfig (unittest.TestCase) :
         ini.set("DataBaseInfo", "DataBaseName", self.DBname)
         ini.set("DataBaseInfo", "UserName", self.DBuser)
         ini.set("DataBaseInfo", "password", self.pwd)
+        ini.set("DataBaseInfo", "Schema", self.DBschema)
         
         self.no_host = copy_config_parser(ini)
         
@@ -145,7 +147,10 @@ class TestVIIRSConfig (unittest.TestCase) :
         # check that each section has the same items
         sections = test_ini.sections() 
         for s in sections : 
-            self.assertEqual(test_ini.items(s), self.ini.items(s))
+            test_items = [ i for i,v in test_ini.items(s) ] 
+            ref_items  = [ i for i,v in self.ini.items(s) ] 
+            for ti in test_items : 
+                self.assertTrue(ti in ref_items)
             
         # check that each item in each section has the same value
         for s in sections : 
@@ -163,7 +168,10 @@ class TestVIIRSConfig (unittest.TestCase) :
         # check that each section has the same items
         sections = test_ini.sections() 
         for s in sections : 
-            self.assertEqual(test_ini.items(s), self.no_host.items(s))
+            test_items = [ i for i,v in test_ini.items(s) ] 
+            ref_items  = [ i for i,v in self.no_host.items(s) ] 
+            for ti in test_items : 
+                self.assertTrue(ti in ref_items)
             
         # check that each item in each section has the same value
         for s in sections : 
