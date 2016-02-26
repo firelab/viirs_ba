@@ -1,14 +1,24 @@
 import unittest
 import ConfigParser
+import StringIO
 import viirs_config as vc
 import numpy as np
+
+def copy_config_parser(ini) :
+    ini_string = StringIO.StringIO()
+    ini.write(ini_string)
+    
+    ini_string.seek(0)
+    new_config = ConfigParser.ConfigParser()
+    new_config.readfp(ini_string)
+    return new_config
 
 class TestVIIRSConfig (unittest.TestCase) : 
     attrs_to_copy = ['BaseDir','use375af','use750af','M07UB','M08UB','M08LB',
                      'M10LB','M10UB','M11LB','RthSub','Rth','RthLB','MaxSolZen',
                      'TemporalProximity', 'SpatialProximity','TextOut','ShapeOut',
                      'DatabaseOut','ShapePath','PostBin','ImageDates','DBname',
-                     'DBuser','pwd']
+                     'DBuser','pwd', 'DBhost']
     def setUp(self) :
         # a clearly fake configuration which has unique values for each parameter 
         self.BaseDir = "TESTING" 
@@ -37,6 +47,7 @@ class TestVIIRSConfig (unittest.TestCase) :
         self.ImageDates = 'boo hoo'
         self.DBname = 'no data here'
         self.DBuser = 'happy gilmore'
+        self.DBhost = 'all your data are belong to me'
         self.pwd = 'mine all mine'
         
          
@@ -82,6 +93,10 @@ class TestVIIRSConfig (unittest.TestCase) :
         ini.set("DataBaseInfo", "UserName", self.DBuser)
         ini.set("DataBaseInfo", "password", self.pwd)
         
+        self.no_host = copy_config_parser(ini)
+        
+        ini.set("DataBaseInfo","Host", self.DBhost)
+        
         self.ini = ini
 
         config = vc.VIIRSConfig() 
@@ -89,6 +104,11 @@ class TestVIIRSConfig (unittest.TestCase) :
             setattr(config,n,getattr(self,n))
         self.config = config
             
+        config = vc.VIIRSConfig() 
+        for n in self.attrs_to_copy : 
+            setattr(config,n,getattr(self,n))
+        config.DBhost = None
+        self.no_host_config = config
         
     def test_get_vector(self) : 
         """ensures that the returned vector contains the values we'd expect"""
@@ -133,6 +153,23 @@ class TestVIIRSConfig (unittest.TestCase) :
             for i,v in items : 
                 self.assertEqual(test_ini.get(s,i), self.ini.get(s,i))
             
+    def test_get_ini_obj_no_host(self) : 
+        """exercises the ini object view of the configuration"""
+        test_ini = self.no_host_config.get_ini_obj()
+        
+        # check that we have the same sections
+        self.assertEqual(test_ini.sections(), self.no_host.sections())
+        
+        # check that each section has the same items
+        sections = test_ini.sections() 
+        for s in sections : 
+            self.assertEqual(test_ini.items(s), self.no_host.items(s))
+            
+        # check that each item in each section has the same value
+        for s in sections : 
+            items = test_ini.items(s)
+            for i,v in items : 
+                self.assertEqual(test_ini.get(s,i), self.no_host.get(s,i))
         
     def test_merge(self) : 
         """exercises the merge of a config object with a new vector of parameters"""
@@ -151,6 +188,25 @@ class TestVIIRSConfig (unittest.TestCase) :
         # check that the vector parameters came from the supplied vector
         for vec_item in vc.vector_param_names : 
             self.assertEqual(getattr(test_vec, vec_item), getattr(m,vec_item))
+
+    def test_merge_no_host(self) : 
+        """exercises the merge of a config object with a new vector of parameters"""
+        test_vec = vc.ConfigVector(*(np.array(self.no_host_config.get_vector()) + 1))
+        m = vc.VIIRSConfig.merge_into_template(test_vec, self.no_host_config)
+        
+        # check all the non-vector items were copied
+        non_vector = list(self.attrs_to_copy)
+        for vec_item in vc.vector_param_names : 
+            non_vector.remove(vec_item)
+        non_vector.remove('ShapePath') # expect that the shapefile path is different
+            
+        for nonvec_item in non_vector : 
+            self.assertEqual(getattr(self.no_host_config, nonvec_item), getattr(m,nonvec_item))
+            
+        # check that the vector parameters came from the supplied vector
+        for vec_item in vc.vector_param_names : 
+            self.assertEqual(getattr(test_vec, vec_item), getattr(m,vec_item))
+            
             
     def test_merge_subclass(self) : 
         """verifies that subclass can override the type of object returned"""

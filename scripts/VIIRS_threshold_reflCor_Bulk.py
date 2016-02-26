@@ -159,7 +159,13 @@ def push_list_to_postgis(config, list, date, table, pSize, band):
     print "\nPushing data to VIIRS_burned_area DB table: public." + table
     format = '%Y-%m-%d %H:%M:%S'
     # Connect to VIIRS database
-    ConnParam = "dbname={0} user={1} password={2}".format(config.DBname, config.DBuser, config.pwd)
+    if config.DBhost is not None : 
+        ConnParam = "dbname={0} user={1} password={2}".format(
+           config.DBname, config.DBuser, config.pwd)
+    else : 
+        ConnParam = "host={3} dbname={0} user={1} password={2}".format(
+           config.DBname, config.DBuser, config.pwd, config.DBhost)
+    
     conn = psycopg2.connect(ConnParam)
     # Open a cursor to perform database operations
     cur = conn.cursor()
