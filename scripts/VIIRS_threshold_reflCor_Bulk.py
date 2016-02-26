@@ -153,13 +153,22 @@ def h5_date_time(f):
     print "\n"
     return dt
 
+def postgis_conn_params(config) : 
+    if config.DBhost is None : 
+        ConnParam = "dbname={0} user={1} password={2}".format(
+           config.DBname, config.DBuser, config.pwd)
+    else : 
+        ConnParam = "host={3} dbname={0} user={1} password={2}".format(
+           config.DBname, config.DBuser, config.pwd, config.DBhost)
+    return ConnParam
+
 
 # Push the coordinates and date/time of the thresholded pixels to PostGIS
 def push_list_to_postgis(config, list, date, table, pSize, band):
     print "\nPushing data to VIIRS_burned_area DB table: public." + table
     format = '%Y-%m-%d %H:%M:%S'
     # Connect to VIIRS database
-    ConnParam = "dbname={0} user={1} password={2}".format(config.DBname, config.DBuser, config.pwd)
+    ConnParam = postgis_conn_params(config)
     conn = psycopg2.connect(ConnParam)
     # Open a cursor to perform database operations
     cur = conn.cursor()
@@ -179,7 +188,7 @@ def push_list_to_postgis(config, list, date, table, pSize, band):
     conn.close()
 def execute_query(config, queryText):
     print "Start", queryText, get_time()
-    ConnParam = "dbname={0} user={1} password={2}".format(config.DBname, config.DBuser, config.pwd)
+    ConnParam = postgis_conn_params(config)
     conn = psycopg2.connect(ConnParam)
     # Open a cursor to perform database operations
     cur = conn.cursor()
@@ -224,7 +233,7 @@ def vacuum_analyze(config, table):
     print "Start Vacuum {0}.{1}".format(config.DBschema, table), get_time()
     query_text = "VACUUM ANALYZE {0}.{1}".format(config.DBschema, table) 
     # Connect to VIIRS database
-    ConnParam = "dbname={0} user={1} password={2}".format(config.DBname, config.DBuser, config.pwd)
+    ConnParam = postgis_conn_params(config)
     conn = psycopg2.connect(ConnParam)
     old_isolation_level = conn.isolation_level
     conn.set_isolation_level(0)

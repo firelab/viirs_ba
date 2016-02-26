@@ -21,10 +21,12 @@ from ConfigParser import ConfigParser
 import os.path
 
 
-vector_param_names = ['M07UB', 'M08LB', 'M08UB', 
+float_vector_params = ['M07UB', 'M08LB', 'M08UB', 
                       'M10LB', 'M10UB', 'M11LB', 
-                      'RthSub', 'Rth', 'RthLB', 'MaxSolZen',
-                      'TemporalProximity', 'SpatialProximity']
+                      'RthSub', 'Rth', 'RthLB', 'MaxSolZen']                      
+int_vector_params = ['TemporalProximity', 'SpatialProximity']
+vector_param_names = float_vector_params + int_vector_params
+
 ConfigVector = namedtuple('ConfigVector', vector_param_names )
                   
 class VIIRSConfig (object) : 
@@ -46,6 +48,7 @@ class VIIRSConfig (object) :
         merged.DBname        = template.DBname
         merged.DBuser        = template.DBuser
         merged.DBschema      = template.DBschema
+        merged.DBhost        = template.DBhost
         merged.pwd           = template.pwd
         
         merged.ImageDates    = template.ImageDates
@@ -83,7 +86,7 @@ class VIIRSConfig (object) :
         target.M08UB = float(ini.get("Thresholds", "M08UB"))     #Band 08 (1.24 um)upper bound
         target.M10LB = float(ini.get("Thresholds", "M10LB"))     #Band 10 (1.61 um)lower bound
         target.M10UB = float(ini.get("Thresholds", "M10UB"))     #Band 10 (1.61 um)upper bound
-        target.M11UB = float(ini.get("Thresholds", "M11LB"))     #Band 11 (2.25 um)lower bound
+        target.M11LB = float(ini.get("Thresholds", "M11LB"))     #Band 11 (2.25 um)lower bound
         target.RthSub= float(ini.get("Thresholds", "RthSub"))   #RthSub is the factor subtracted from the 1.240 band when comparing to the Rth
         target.Rth   = float(ini.get("Thresholds", "Rth"))         #Rth
         target.RthLB = float(ini.get("Thresholds", "RthLB"))     #RthLB is the factor that the Rth check must be greater than or equal to
@@ -99,12 +102,16 @@ class VIIRSConfig (object) :
         target.ShapePath = ini.get("OutputFlags", "OutShapeDir").lower()
         target.PostBin = ini.get("OutputFlags", "PostgresqlBin").lower()
         
-        target.ImageDates = ini.get("ImageDates", "ImageDates")
+        target.ImageDates = ini.get("ImageDates", "ImageDates").split(',')
         
         target.DBname = ini.get("DataBaseInfo", "DataBaseName")
         target.DBuser = ini.get("DataBaseInfo", "UserName")
         target.DBschema = ini.get("DataBaseInfo", "Schema")
         target.pwd = ini.get("DataBaseInfo", "password")
+        if ini.has_option("DataBaseInfo", "Host") : 
+            target.DBhost = ini.get("DataBaseInfo", "Host")
+        else : 
+            target.DBhost = None
         
         target.run_id = cls.create_run_id(target)
         
@@ -132,11 +139,14 @@ class VIIRSConfig (object) :
         fltfmt = '{:4.2f}'
         ini = ConfigParser() 
         
+        ini.add_section("InDirectory")
         ini.set("InDirectory", "BaseDirectory", self.BaseDir)
         
+        ini.add_section("ActiveFire")
         ini.set("ActiveFire", "use375af",self.use375af.lower())              # Flag to use M-band 750 m active fire data, AVAFO (y or n)  
         ini.set("ActiveFire", "use750af",self.use750af.lower())              # Flag to use I-band 375 m active fire data, VF375 (y or n)
 
+        ini.add_section("Thresholds")
         ini.set("Thresholds", "M07UB", fltfmt.format(self.M07UB))     #Band 07 (0.86 um)upper bound
         ini.set("Thresholds", "M08LB", fltfmt.format(self.M08LB))     #Band 08 (1.24 um)lower bound
         ini.set("Thresholds", "M08UB", fltfmt.format(self.M08UB))     #Band 08 (1.24 um)upper bound
@@ -148,23 +158,29 @@ class VIIRSConfig (object) :
         ini.set("Thresholds", "RthLB", fltfmt.format(self.RthLB))     #RthLB is the factor that the Rth check must be greater than or equal to
         ini.set("Thresholds", "MaxSolZen",fltfmt.format(self.MaxSolZen)) #Maximum solar zenith angle, used to filter out night pixels from burned area thresholding 
 
+        ini.add_section("ConfirmBurnParameters")
         ini.set("ConfirmBurnParameters", "TemporalProximity", 
                    '{:d}'.format(self.TemporalProximity))
         ini.set("ConfirmBurnParameters", "SpatialProximity", 
                    '{:d}'.format(self.SpatialProximity))
 
+        ini.add_section("OutputFlags")
         ini.set("OutputFlags", "TextFile", self.TextOut.lower())
         ini.set("OutputFlags", "ShapeFile", self.ShapeOut.lower())
         ini.set("OutputFlags", "PostGIS", self.DatabaseOut.lower())
         ini.set("OutputFlags", "OutShapeDir", self.ShapePath.lower())
         ini.set("OutputFlags", "PostgresqlBin",self.PostBin.lower())
         
-        ini.set("ImageDates", "ImageDates", self.ImageDates)
+        ini.add_section("ImageDates")
+        ini.set("ImageDates", "ImageDates", ','.join(self.ImageDates))
         
+        ini.add_section("DataBaseInfo")
         ini.set("DataBaseInfo", "DataBaseName", self.DBname)
         ini.set("DataBaseInfo", "UserName", self.DBuser)
         ini.set("DataBaseInfo", "Schema", self.DBschema)
         ini.set("DataBaseInfo", "password", self.pwd)
+        if self.DBhost is not None : 
+            ini.set("DataBaseInfo", "Host", self.DBhost)
         
         return ini
         
@@ -181,8 +197,10 @@ class VIIRSConfig (object) :
         This essentially includes the [Thresholds] and [ConfirmBurnParameters]
         sections."""
         params_dict = {} 
-        for p in vector_param_names :
-            params_dict[p] = getattr(self, p)
+        for p in float_vector_params :
+            params_dict[p] = float(getattr(self, p))
+        for p in int_vector_params : 
+            params_dict[p] = int(getattr(self, p))
         return ConfigVector(**params_dict) 
         
 class SequentialVIIRSConfig (VIIRSConfig) : 
