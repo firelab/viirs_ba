@@ -1,4 +1,5 @@
 import unittest
+import os.path
 import ConfigParser
 import StringIO
 import viirs_config as vc
@@ -104,12 +105,14 @@ class TestVIIRSConfig (unittest.TestCase) :
         config = vc.VIIRSConfig() 
         for n in self.attrs_to_copy : 
             setattr(config,n,getattr(self,n))
+        config.run_id = vc.VIIRSConfig.create_run_id(config)
         self.config = config
             
         config = vc.VIIRSConfig() 
         for n in self.attrs_to_copy : 
             setattr(config,n,getattr(self,n))
         config.DBhost = None
+        config.run_id = vc.VIIRSConfig.create_run_id(config)
         self.no_host_config = config
         
     def test_get_vector(self) : 
@@ -189,6 +192,7 @@ class TestVIIRSConfig (unittest.TestCase) :
         for vec_item in vc.vector_param_names : 
             non_vector.remove(vec_item)
         non_vector.remove('ShapePath') # expect that the shapefile path is different
+        non_vector.remove('DBschema') # expect that the schema is different
             
         for nonvec_item in non_vector : 
             self.assertEqual(getattr(self.config, nonvec_item), getattr(m,nonvec_item))
@@ -207,6 +211,7 @@ class TestVIIRSConfig (unittest.TestCase) :
         for vec_item in vc.vector_param_names : 
             non_vector.remove(vec_item)
         non_vector.remove('ShapePath') # expect that the shapefile path is different
+        non_vector.remove('DBschema') # expect that the schema is different
             
         for nonvec_item in non_vector : 
             self.assertEqual(getattr(self.no_host_config, nonvec_item), getattr(m,nonvec_item))
@@ -230,6 +235,7 @@ class TestVIIRSConfig (unittest.TestCase) :
         for vec_item in vc.vector_param_names : 
             non_vector.remove(vec_item)
         non_vector.remove('ShapePath') # expect that the shapefile path is different
+        non_vector.remove('DBschema') # expect that the schema is different
             
         for nonvec_item in non_vector : 
             self.assertEqual(getattr(self.config, nonvec_item), getattr(m,nonvec_item))
@@ -237,4 +243,9 @@ class TestVIIRSConfig (unittest.TestCase) :
         # check that the vector parameters came from the supplied vector
         for vec_item in vc.vector_param_names : 
             self.assertEqual(getattr(test_vec, vec_item), getattr(m,vec_item))
+            
+    def test_perturbed_dir(self) : 
+        base_dir = '/hey/there/Ima/path'
+        new_dir  = self.config.perturb_dir(base_dir)
+        self.assertEqual(os.path.join('/hey/there/Ima',str(self.config.run_id)),new_dir)
                 

@@ -61,9 +61,9 @@ class VIIRSConfig (object) :
             setattr(merged, p, getattr(thresh_vec, p))        
         
         # handle changes
-        run_id             = cls.create_run_id(merged)
-        merged.run_id      = run_id
+        merged.run_id      = cls.create_run_id(merged)
         merged.ShapePath = merged.perturb_dir(template.ShapePath)
+        merged.perturb_schema() 
         
         
         return merged
@@ -125,6 +125,10 @@ class VIIRSConfig (object) :
         place in the filesystem (in the same containing directory.)"""
         base = os.path.dirname(orig_dir)
         return os.path.join(base, str(self.run_id))
+        
+    def perturb_schema(self) :
+        """modifies the schema name based on the run id"""
+        self.DBschema = 'Run{0}'.format(self.run_id)
         
     @classmethod
     def create_run_id(cls, obj) : 
