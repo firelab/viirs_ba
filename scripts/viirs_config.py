@@ -101,7 +101,7 @@ class VIIRSConfig (object) :
         target.ShapePath = ini.get("OutputFlags", "OutShapeDir").lower()
         target.PostBin = ini.get("OutputFlags", "PostgresqlBin").lower()
         
-        target.ImageDates = ini.get("ImageDates", "ImageDates")
+        target.ImageDates = ini.get("ImageDates", "ImageDates").split(',')
         
         target.DBname = ini.get("DataBaseInfo", "DataBaseName")
         target.DBuser = ini.get("DataBaseInfo", "UserName")
@@ -170,7 +170,7 @@ class VIIRSConfig (object) :
         ini.set("OutputFlags", "PostgresqlBin",self.PostBin.lower())
         
         ini.add_section("ImageDates")
-        ini.set("ImageDates", "ImageDates", self.ImageDates)
+        ini.set("ImageDates", "ImageDates", ','.join(self.ImageDates))
         
         ini.add_section("DataBaseInfo")
         ini.set("DataBaseInfo", "DataBaseName", self.DBname)

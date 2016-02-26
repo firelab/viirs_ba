@@ -44,7 +44,7 @@ class TestVIIRSConfig (unittest.TestCase) :
         self.ShapePath='totally fake'
         self.PostBin='not on this machine, you dont'
         
-        self.ImageDates = 'boo hoo'
+        self.ImageDates = ['boo','hoo','too']
         self.DBname = 'no data here'
         self.DBuser = 'happy gilmore'
         self.DBhost = 'all your data are belong to me'
@@ -86,7 +86,7 @@ class TestVIIRSConfig (unittest.TestCase) :
         ini.set("OutputFlags", "PostgresqlBin",self.PostBin.lower())
         
         ini.add_section("ImageDates")
-        ini.set("ImageDates", "ImageDates", self.ImageDates)
+        ini.set("ImageDates", "ImageDates", ','.join(self.ImageDates))
         
         ini.add_section("DataBaseInfo")
         ini.set("DataBaseInfo", "DataBaseName", self.DBname)
