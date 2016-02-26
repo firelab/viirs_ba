@@ -85,7 +85,7 @@ class VIIRSConfig (object) :
         target.M08UB = float(ini.get("Thresholds", "M08UB"))     #Band 08 (1.24 um)upper bound
         target.M10LB = float(ini.get("Thresholds", "M10LB"))     #Band 10 (1.61 um)lower bound
         target.M10UB = float(ini.get("Thresholds", "M10UB"))     #Band 10 (1.61 um)upper bound
-        target.M11UB = float(ini.get("Thresholds", "M11LB"))     #Band 11 (2.25 um)lower bound
+        target.M11LB = float(ini.get("Thresholds", "M11LB"))     #Band 11 (2.25 um)lower bound
         target.RthSub= float(ini.get("Thresholds", "RthSub"))   #RthSub is the factor subtracted from the 1.240 band when comparing to the Rth
         target.Rth   = float(ini.get("Thresholds", "Rth"))         #Rth
         target.RthLB = float(ini.get("Thresholds", "RthLB"))     #RthLB is the factor that the Rth check must be greater than or equal to
