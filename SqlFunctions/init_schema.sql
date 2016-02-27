@@ -3,6 +3,7 @@ CREATE OR REPLACE FUNCTION init_schema(name text)
 $BODY$
     BEGIN
 
+    EXECUTE 'DROP SCHEMA IF EXISTS ' || name || ' CASCADE' ;
     EXECUTE 'CREATE SCHEMA ' || name ; 
     
     --

@@ -16,40 +16,46 @@ DECLARE
   distance integer := $4; 
   a_row RECORD;
   dumrec RECORD;
+  loop_query text ; 
+  confirm_query text ; 
+  insert_confirmed text ; 
+  update_collection text;
 BEGIN
-  loop_query := 'SELECT a.* FROM $1.threshold_burned a ' ||
-    'WHERE collection_date = $2 ' ||
+  loop_query := 'SELECT a.* FROM ' || quote_ident(schema) || '.threshold_burned a ' ||
+    'WHERE collection_date = $1 ' ||
       'AND confirmed_burn = TRUE';
       
   confirm_query := 'SELECT * from (SELECT fe.fid as fe_fid,  ' ||
            'fe.geom, fc.fid as fc_fid ' || 
-      'FROM $1.fire_events fe, $1.fire_collections fc ' ||
+      'FROM ' || quote_ident(schema) || '.fire_events fe, ' || 
+                 quote_ident(schema) || '.fire_collections fc ' ||
       'WHERE fe.collection_id = fc.fid ' ||
-        'AND fc.last_update >= $2 - $3 ' ||
-        'AND fc.last_update <= $2 ' ||
+        'AND fc.last_update >= $1 - $2 ' ||
+        'AND fc.last_update <= $1 ' ||
         'AND fc.active = TRUE) as tf ' ||
-    'WHERE ST_DWithin(ST_Transform(a_row.geom, 102008), tf.geom, $4) LIMIT 1';
+    'WHERE ST_DWithin(ST_Transform($4, 102008), tf.geom, $3) LIMIT 1';
     
-  insert_confirmed := 'INSERT INTO $1.fire_events ' ||
+  insert_confirmed := 'INSERT INTO ' || quote_ident(schema) || '.fire_events ' ||
       '(latitude, longitude, geom, source, collection_id, ' ||
        'collection_date, pixel_size, band_i_m) ' ||
-      'VALUES(a_row.latitude, a_row.longitude, ' ||
-             'ST_Multi(ST_Transform(a_row.geom, 102008)), ' || 
+      'VALUES($1, $2, ' ||
+             'ST_Multi(ST_Transform($3, 102008)), ' || 
              quote_literal('Threshold') ||
-             ', dumrec.fc_fid, a_row.collection_date, a_row.pixel_size, a_row.band_i_m)';
+             ', $4, $5, $6, $7)';
 
-  update_collection :=  'UPDATE $1.fire_collections ' ||
-      'SET last_update = a_row.collection_date ' || 
-      'WHERE dumrec.fc_fid = fire_collections.fid' ;
+  update_collection :=  'UPDATE ' || quote_ident(schema) || '.fire_collections ' ||
+      'SET last_update = $1 ' || 
+      'WHERE $2 = ' || quote_ident(schema) || '.fire_collections.fid' ;
 
       
-  FOR a_row IN EXECUTE loop_query USING schema, collection 
+  FOR a_row IN EXECUTE loop_query USING collection 
   LOOP
-  EXECUTE confirm_query INTO dumrec USING schema, collection, recent, distance ;
-  IF EXISTS (EXECUTE confirm_query USING schema, collection, recent, distance) THEN
+  EXECUTE confirm_query INTO dumrec USING collection, recent, distance, a_row.geom ;
+  IF dumrec IS NOT NULL THEN
     RAISE NOTICE 'found a match' ;
-    EXECUTE insert_confirmed USING schema ; 
-    EXECUTE update_collection USING schema ; 
+    EXECUTE insert_confirmed USING a_row.latitude, a_row.longitude, a_row.geom, 
+          dumrec.fc_fid, a_row.collection_date, a_row.pixel_size, a_row.band_i_m ; 
+    EXECUTE update_collection USING a_row.collection_date, dumrec.fc_fid ; 
   END IF;
   END LOOP;
 return;

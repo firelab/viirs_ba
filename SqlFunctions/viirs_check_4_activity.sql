@@ -13,8 +13,8 @@ DECLARE
   collection timestamp without time zone := $2;
   recent interval := $3;
 BEGIN
-EXECUTE 'UPDATE $1.fire_collections SET active = FALSE where age($2, last_update) > $3'
-   USING schema, collection, recent ;
+EXECUTE 'UPDATE ' || quote_ident(schema) || '.fire_collections SET active = FALSE where age($1, last_update) > $2'
+   USING collection, recent ;
 END
 $BODY$
   LANGUAGE plpgsql VOLATILE

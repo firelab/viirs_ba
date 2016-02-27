@@ -14,18 +14,19 @@ $BODY$
     collection TIMESTAMP := $2;
     recent_interval INTERVAL := $3;
     distance INTEGER := $4;
+    query text ; 
 BEGIN
-    query := 'UPDATE threshold_burned ' ||
+    query := 'UPDATE ' || quote_ident(schema) || '.threshold_burned ' ||
         'SET confirmed_burn = TRUE ' || 
         'FROM(' ||
-            'SELECT a.* FROM $1.threshold_burned a ' ||
-            'LEFT JOIN $1.active_fire b ' || 
-            'ON ST_DWithin(ST_Transform(a.geom, 102008), ST_Transform(b.geom, 102008), $2)' ||
-        'WHERE a.collection_date = $3 ' || 
-            'AND b.collection_date >= $3 - $4 ' || 
-            'AND b.collection_date <= $3) AS subquery ' || 
+            'SELECT a.* FROM ' || quote_ident(schema) || '.threshold_burned a ' ||
+            'LEFT JOIN ' || quote_ident(schema) || '.active_fire b ' || 
+            'ON ST_DWithin(ST_Transform(a.geom, 102008), ST_Transform(b.geom, 102008), $1)' ||
+        'WHERE a.collection_date = $2 ' || 
+            'AND b.collection_date >= $2 - $3 ' || 
+            'AND b.collection_date <= $2) AS subquery ' || 
         'WHERE threshold_burned.fid = subquery.fid';
-    EXECUTE query USING schema, distance, collection, recent_interval ;
+    EXECUTE query USING distance, collection, recent_interval ;
 END
 $BODY$
   LANGUAGE plpgsql VOLATILE

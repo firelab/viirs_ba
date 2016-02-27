@@ -165,7 +165,7 @@ def postgis_conn_params(config) :
 
 # Push the coordinates and date/time of the thresholded pixels to PostGIS
 def push_list_to_postgis(config, list, date, table, pSize, band):
-    print "\nPushing data to VIIRS_burned_area DB table: public." + table
+    print "\nPushing data to {0} DB table: {1}.{2}".format(config.DBname, config.DBschema,table)
     format = '%Y-%m-%d %H:%M:%S'
     # Connect to VIIRS database
     ConnParam = postgis_conn_params(config)
@@ -200,22 +200,22 @@ def execute_query(config, queryText):
     print "End", queryText, get_time()
  
 def execute_check_4_activity(config, collectionDate):
-    query_text = "SELECT viirs_check_4_activity(\'{0}\', \'{1}\');".format(collectionDate, config.TemporalProximity)
+    query_text = "SELECT viirs_check_4_activity('{0}', '{1}', '{2}');".format(config.DBschema, collectionDate, config.TemporalProximity)
     execute_query(config,query_text)
  
 def execute_active_fire_2_events(config, collectionDate):
     print "Start active_fire to fire_events", get_time()
-    query_text = "SELECT VIIRS_activefire_2_fireevents(\'{0}\', \'{1}\', {2});".format(collectionDate, config.TemporalProximity, config.SpatialProximity)
+    query_text = "SELECT VIIRS_activefire_2_fireevents('{0}', '{1}', '{2}', {3});".format(config.DBschema, collectionDate, config.TemporalProximity, config.SpatialProximity)
     execute_query(config,query_text)
 
 def execute_threshold_2_events(config, collectionDate):
     print "Start simple confirm burn", get_time()
-    query_text = "SELECT VIIRS_threshold_2_fireevents(\'{0}\', \'{1}\', {2});".format(collectionDate, config.TemporalProximity, config.SpatialProximity)
+    query_text = "SELECT VIIRS_threshold_2_fireevents('{0}', '{1}', '{2}', {3});".format(config.DBschema, collectionDate, config.TemporalProximity, config.SpatialProximity)
     execute_query(config,query_text)
 
 def execute_simple_confirm_burns(config, collectionDate):
     print "Start threshold_burned to fire_events", get_time()
-    query_text = "SELECT VIIRS_simple_confirm_burns(\'{0}\', \'{1}\', {2});".format(collectionDate, config.TemporalProximity, config.SpatialProximity)
+    query_text = "SELECT VIIRS_simple_confirm_burns('{0}', '{1}', '{2}', {3});".format(config.DBschema, collectionDate, config.TemporalProximity, config.SpatialProximity)
     execute_query(config,query_text)
 
  
@@ -249,8 +249,8 @@ def vacuum_analyze(config, table):
 
 def initialize_schema_for_postgis(config) : 
     """create the schema to hold outputs, populate with empty tables"""
-    query_text = 'SELECT init_schema({0})'.format(config.DBschema)
-    execute_query(query_text)
+    query_text = "SELECT init_schema('{0}')".format(config.DBschema)
+    execute_query(config,query_text)
     
 
 def get_time():
@@ -434,7 +434,7 @@ def run(config):
         # Burned area output to PostGIS 
         if config.DatabaseOut == "y":
             push_list_to_postgis(config, BaOut_list, H5Date, "threshold_burned", "750", "m")
-            vacuum_analyze(config,"threshold_burned")
+            #vacuum_analyze(config,"threshold_burned")
     
             # Clean up arrays
         BaOut_list = None
@@ -514,12 +514,12 @@ def run(config):
             if config.use375af == "y":
                 # write 375 active fire to DB
                 push_list_to_postgis(config,Af375Out_list, H5Date, "active_fire", "375", "i")
-                vacuum_analyze(config,"active_fire")
+                #vacuum_analyze(config,"active_fire")
             
             if config.use750af == "y":
                 # write 750 active fire to DB
                 push_list_to_postgis(config,AfOut_list, H5Date, "active_fire", "750", "m")
-                vacuum_analyze(config,"active_fire")
+                #vacuum_analyze(config,"active_fire")
         
             # check if fires are still active
             print "\nChecking if fires are still active"
@@ -536,14 +536,16 @@ def run(config):
             print "\nPerform simple confirm burned area"
             date_4db = datetime.datetime.strftime(H5Date, "%Y-%m-%d %H:%M:%S")
             execute_simple_confirm_burns(config, date_4db)
-            #vacuum_analyze(config,"threhold_burned")
+            #vacuum_analyze(config,"threshold_burned")
     
             # threshold to fires events 
             print "\nEvaluate and copy thresholded burned area to fire events"
             date_4db = datetime.datetime.strftime(H5Date, "%Y-%m-%d %H:%M:%S")
             execute_threshold_2_events(config, date_4db)
-            #vacuum_analyze(config,"threhold_burned")
-            vacuum_analyze(config, '')
+
+            vacuum_analyze(config,"active_fire")
+            vacuum_analyze(config,"threshold_burned")
+            #vacuum_analyze(config, '')
         
         # Clean up arrays
         AfOut_list = None
@@ -570,11 +572,11 @@ def run(config):
             os.makedirs(config.ShapePath)
         shp = config.ShapePath + '/' + 'fire_collection_point_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S')    
         Pgsql2shpExe = os.path.join(config.PostBin, "pgsql2shp")
-        query = '\"SELECT a.*, b.fid as col_id, b.active FROM fire_events a, fire_collections b WHERE a.collection_id = b.fid;\"'
+        query = 'SELECT a.*, b.fid as col_id, b.active FROM {0}.fire_events a, {0}.fire_collections b WHERE a.collection_id = b.fid;'.format(config.DBschema)
         if config.DBhost is None : 
-            command =  '\"{0}\" -f {1} -h localhost -u {2} -P {3} {4} {5}'.format(Pgsql2shpExe, shp, config.DBuser, config.pwd, config.DBname, query).replace('\\', '/')     
+            command =  '\"{0}\" -f {1} -h localhost -u {2} -P {3} {4} "{5}"'.format(Pgsql2shpExe, shp, config.DBuser, config.pwd, config.DBname, query).replace('\\', '/')     
         else : 
-            command =  '\"{0}\" -f {1} -h {6} -u {2} -P {3} {4} {5}'.format(Pgsql2shpExe, shp, config.DBuser, config.pwd, config.DBname, query, config.DBhost).replace('\\', '/')     
+            command =  '\"{0}\" -f {1} -h {6} -u {2} -P {3} {4} "{5}"'.format(Pgsql2shpExe, shp, config.DBuser, config.pwd, config.DBname, query, config.DBhost).replace('\\', '/')     
             
         print command
         subprocess.call(command, shell = True)
@@ -585,8 +587,11 @@ def run(config):
             os.makedirs(config.ShapePath)
         shp = config.ShapePath + '/' + 'fire_collection_poly_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S')    
         Pgsql2shpExe = os.path.join(config.PostBin, "pgsql2shp")
-        query = '\"SELECT ST_Multi(ST_Union(ST_Expand(geom, 375))) as geom, collection_id FROM fire_events GROUP BY collection_id;\"'
-        command =  '\"{0}\" -f {1} -h localhost -u {2} -P {3} {4} {5}'.format(Pgsql2shpExe, shp, config.DBuser, config.pwd, config.DBname, query).replace('\\', '/')     
+        query = 'SELECT ST_Multi(ST_Union(ST_Expand(geom, 375))) as geom, collection_id FROM {0}.fire_events GROUP BY collection_id;'.format(config.DBschema)
+        if config.DBhost is None : 
+            command =  '"{0}" -f {1} -h localhost -u {2} -P {3} {4} "{5}"'.format(Pgsql2shpExe, shp, config.DBuser, config.pwd, config.DBname, query).replace('\\', '/')     
+        else : 
+            command =  '"{0}" -f {1} -h {6} -u {2} -P {3} {4} "{5}"'.format(Pgsql2shpExe, shp, config.DBuser, config.pwd, config.DBname, query, config.DBhost).replace('\\', '/')     
         print command
         subprocess.call(command, shell = True)
         shutil.copy2(IniFile, os.path.join(config.ShapePath, os.path.basename(IniFile + '_'+ datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))))     
