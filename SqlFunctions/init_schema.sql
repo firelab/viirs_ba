@@ -25,7 +25,7 @@ $BODY$
     -- Name: active_fire_fid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
     --
     
-    EXECUTE 'CREATE SEQUENCE ' || name || '_active_fire_fid_seq ' ||
+    EXECUTE 'CREATE SEQUENCE ' || name || '.active_fire_fid_seq ' ||
         'START WITH 1 ' ||
         'INCREMENT BY 1 ' || 
         'NO MINVALUE ' || 
@@ -33,13 +33,13 @@ $BODY$
         'CACHE 1';
     
     
-    EXECUTE 'ALTER TABLE ' || name || '_active_fire_fid_seq OWNER TO postgres';
+    EXECUTE 'ALTER TABLE ' || name || '.active_fire_fid_seq OWNER TO postgres';
     
     --
     -- Name: active_fire_fid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
     --
     
-    EXECUTE 'ALTER SEQUENCE ' || name || '_active_fire_fid_seq OWNED BY '||
+    EXECUTE 'ALTER SEQUENCE ' || name || '.active_fire_fid_seq OWNED BY '||
         name || '.active_fire.fid';
     
     
@@ -61,7 +61,7 @@ $BODY$
     -- Name: fire_collections_fid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
     --
     
-    EXECUTE 'CREATE SEQUENCE ' || name || '_fire_collections_fid_seq ' ||
+    EXECUTE 'CREATE SEQUENCE ' || name || '.fire_collections_fid_seq ' ||
         'START WITH 1 ' ||
         'INCREMENT BY 1 ' ||
         'NO MINVALUE ' ||
@@ -69,13 +69,13 @@ $BODY$
         'CACHE 1';
     
     
-    EXECUTE 'ALTER TABLE ' || name || '_fire_collections_fid_seq OWNER TO postgres';
+    EXECUTE 'ALTER TABLE ' || name || '.fire_collections_fid_seq OWNER TO postgres';
     
     --
     -- Name: fire_collections_fid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
     --
     
-    EXECUTE 'ALTER SEQUENCE ' || name || '_fire_collections_fid_seq OWNED BY ' ||
+    EXECUTE 'ALTER SEQUENCE ' || name || '.fire_collections_fid_seq OWNED BY ' ||
          name || '.fire_collections.fid';
     
     
@@ -101,7 +101,7 @@ $BODY$
     -- Name: fire_events_fid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
     --
     
-    EXECUTE 'CREATE SEQUENCE ' || name || '_fire_events_fid_seq ' || 
+    EXECUTE 'CREATE SEQUENCE ' || name || '.fire_events_fid_seq ' || 
         'START WITH 1 ' ||
         'INCREMENT BY 1 ' || 
         'NO MINVALUE ' ||
@@ -109,13 +109,13 @@ $BODY$
         'CACHE 1';
     
     
-    EXECUTE 'ALTER TABLE ' || name || '_fire_events_fid_seq OWNER TO postgres';
+    EXECUTE 'ALTER TABLE ' || name || '.fire_events_fid_seq OWNER TO postgres';
     
     --
     -- Name: fire_events_fid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
     --
     
-    EXECUTE 'ALTER SEQUENCE ' || name || '_fire_events_fid_seq OWNED BY ' ||
+    EXECUTE 'ALTER SEQUENCE ' || name || '.fire_events_fid_seq OWNED BY ' ||
          name || '.fire_events.fid';
     
     
@@ -140,7 +140,7 @@ $BODY$
     -- Name: threshold_burned_fid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
     --
     
-    EXECUTE 'CREATE SEQUENCE ' || name || '_threshold_burned_fid_seq ' || 
+    EXECUTE 'CREATE SEQUENCE ' || name || '.threshold_burned_fid_seq ' || 
         'START WITH 1 ' ||
         'INCREMENT BY 1 ' ||
         'NO MINVALUE ' || 
@@ -148,13 +148,13 @@ $BODY$
         'CACHE 1';
     
     
-    EXECUTE 'ALTER TABLE ' || name || '_threshold_burned_fid_seq OWNER TO postgres';
+    EXECUTE 'ALTER TABLE ' || name || '.threshold_burned_fid_seq OWNER TO postgres';
     
     --
     -- Name: threshold_burned_fid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
     --
     
-    EXECUTE 'ALTER SEQUENCE ' || '_threshold_burned_fid_seq OWNED BY ' ||
+    EXECUTE 'ALTER SEQUENCE ' || name || '.threshold_burned_fid_seq OWNED BY ' ||
         name || '.threshold_burned.fid';
     
     
@@ -164,7 +164,7 @@ $BODY$
     
     EXECUTE 'ALTER TABLE ONLY ' || name || 
       '.active_fire ALTER COLUMN fid SET DEFAULT ' ||
-      'nextval(' || quote_literal('active_fire_fid_seq') || '::regclass)';
+      'nextval(' || quote_literal(name || '.active_fire_fid_seq') || '::regclass)';
     
     
     --
@@ -173,7 +173,7 @@ $BODY$
     
     EXECUTE 'ALTER TABLE ONLY ' || name || 
       '.fire_collections ALTER COLUMN fid SET DEFAULT ' ||
-      'nextval(' || quote_literal('fire_collections_fid_seq') || '::regclass)';
+      'nextval(' || quote_literal(name || '.fire_collections_fid_seq') || '::regclass)';
     
     
     --
@@ -182,7 +182,7 @@ $BODY$
     
     EXECUTE 'ALTER TABLE ONLY ' || name ||
        '.fire_events ALTER COLUMN fid SET DEFAULT ' ||
-       'nextval(' || quote_literal('fire_events_fid_seq') || '::regclass)';
+       'nextval(' || quote_literal(name || '.fire_events_fid_seq') || '::regclass)';
     
     
     --
@@ -191,7 +191,7 @@ $BODY$
     
     EXECUTE 'ALTER TABLE ONLY ' || name || 
       '.threshold_burned ALTER COLUMN fid SET DEFAULT ' ||
-      'nextval(' || quote_literal('threshold_burned_fid_seq') || '::regclass)';
+      'nextval(' || quote_literal(name || '.threshold_burned_fid_seq') || '::regclass)';
     
     
     --
