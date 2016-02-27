@@ -247,6 +247,12 @@ def vacuum_analyze(config, table):
     conn.close()
     print "End Vacuum {0}".format(table), get_time(), "\n"
 
+def initialize_schema_for_postgis(config) : 
+    """create the schema to hold outputs, populate with empty tables"""
+    query_text = 'SELECT init_schema({0})'.format(config.DBschema)
+    execute_query(query_text)
+    
+
 def get_time():
     ts = time.time()
     dt = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -255,6 +261,9 @@ def get_time():
     
 
 def run(config):
+    
+    if config.DatabaseOut == "y":
+        initialize_schema_for_postgis(config)
 
     #Loop through BaseDir, look for h5s and load arrays
     count = 0
