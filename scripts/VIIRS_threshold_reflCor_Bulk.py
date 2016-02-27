@@ -562,7 +562,11 @@ def run(config):
         shp = config.ShapePath + '/' + 'fire_collection_point_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S')    
         Pgsql2shpExe = os.path.join(config.PostBin, "pgsql2shp")
         query = '\"SELECT a.*, b.fid as col_id, b.active FROM fire_events a, fire_collections b WHERE a.collection_id = b.fid;\"'
-        command =  '\"{0}\" -f {1} -h localhost -u {2} -P {3} {4} {5}'.format(Pgsql2shpExe, shp, config.DBuser, config.pwd, config.DBname, query).replace('\\', '/')     
+        if config.DBhost is None : 
+            command =  '\"{0}\" -f {1} -h localhost -u {2} -P {3} {4} {5}'.format(Pgsql2shpExe, shp, config.DBuser, config.pwd, config.DBname, query).replace('\\', '/')     
+        else : 
+            command =  '\"{0}\" -f {1} -h {6} -u {2} -P {3} {4} {5}'.format(Pgsql2shpExe, shp, config.DBuser, config.pwd, config.DBname, query, config.DBhost).replace('\\', '/')     
+            
         print command
         subprocess.call(command, shell = True)
         shutil.copy2(IniFile, os.path.join(config.ShapePath, os.path.basename(IniFile + '_'+ datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))))     
