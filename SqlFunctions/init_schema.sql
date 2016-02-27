@@ -1,8 +1,9 @@
 CREATE OR REPLACE FUNCTION init_schema(name text) 
    RETURNS void AS
 $BODY$
+    BEGIN
 
-    EXECUTE 'CREATE SCHEMA || name ; 
+    EXECUTE 'CREATE SCHEMA ' || name ; 
     
     --
     -- Name: active_fire; Type: TABLE; Schema: public; Owner: postgres
@@ -248,6 +249,7 @@ $BODY$
     EXECUTE 'CREATE INDEX idx_' || name || '_threshold_burned_geom ON ' || 
        name || '.threshold_burned USING gist (geom)';
        
+    END
 $BODY$ 
   LANGUAGE plpgsql VOLATILE
   COST 100 ; 
