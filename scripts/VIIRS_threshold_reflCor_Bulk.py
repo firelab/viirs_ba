@@ -175,12 +175,12 @@ def push_list_to_postgis(config, list, date, table, pSize, band):
     #Loop through list
     for i in list:
         # Execute a command to insert new records into table
-        cur.execute("INSERT INTO %s.%s (latitude, longitude, collection_date, geom, pixel_size, band_i_m) VALUES ('%s','%s','%s', ST_GeomFromText('POINT(%s %s)',4326),'%s','%s');"%(config.DBschema, table, i[0], i[1], datetime.datetime.strftime(date, format), i[1], i[0],pSize,band))
+        cur.execute("INSERT INTO \"%s\".%s (latitude, longitude, collection_date, geom, pixel_size, band_i_m) VALUES ('%s','%s','%s', ST_GeomFromText('POINT(%s %s)',4326),'%s','%s');"%(config.DBschema, table, i[0], i[1], datetime.datetime.strftime(date, format), i[1], i[0],pSize,band))
         # Make the changes to the database persistent
         conn.commit()
     old_isolation_level = conn.isolation_level
     conn.set_isolation_level(0)
-    cur.execute("VACUUM ANALYZE %s.%s;"%(config.DBschema, table)) 
+    cur.execute("VACUUM ANALYZE \"%s\".%s;"%(config.DBschema, table)) 
     conn.set_isolation_level(old_isolation_level)
     conn.commit()
     # Close communication with the database
@@ -231,7 +231,7 @@ def execute_simple_confirm_burns(config, collectionDate):
     
 def vacuum_analyze(config, table):
     print "Start Vacuum {0}.{1}".format(config.DBschema, table), get_time()
-    query_text = "VACUUM ANALYZE {0}.{1}".format(config.DBschema, table) 
+    query_text = "VACUUM ANALYZE \"{0}\".{1}".format(config.DBschema, table) 
     # Connect to VIIRS database
     ConnParam = postgis_conn_params(config)
     conn = psycopg2.connect(ConnParam)
