@@ -54,7 +54,8 @@ if __name__ == "__main__":
     data_table.to_csv(run_info_file)
     
     # do the work
-    print "Running {0} iterations, using {1} parallel workers.".format(len(p), mp.cpu_count())
-    mypool = mp.Pool()
+    workers=12
+    print "Running {0} iterations, using {1} parallel workers.".format(len(p), workers)
+    mypool = mp.Pool(processes=workers)
     mypool.map(vt.run, p)
         
