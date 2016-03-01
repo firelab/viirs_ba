@@ -124,11 +124,11 @@ class VIIRSConfig (object) :
         ensures that the output directories for all runs live at the same 
         place in the filesystem (in the same containing directory.)"""
         base = os.path.dirname(orig_dir)
-        return os.path.join(base, str(self.run_id))
+        return os.path.join(base, 'Run_{:04d}'.format(self.run_id))
         
     def perturb_schema(self) :
         """modifies the schema name based on the run id"""
-        self.DBschema = 'Run{0}'.format(self.run_id)
+        self.DBschema = 'Run_{:04d}'.format(self.run_id)
         
     @classmethod
     def create_run_id(cls, obj) : 
