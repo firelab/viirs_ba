@@ -394,6 +394,16 @@ def run(config):
             ((M10ReflArray - M10ReflFact[1])/M10ReflFact[0] < 65528) &
             ((M11ReflArray - M11ReflFact[1])/M11ReflFact[0] < 65528)
             ] = 1
+
+        # Apply geographic window, if specified
+        if config.has_window() : 
+            BaCon[
+                (LatArray > config.north) | 
+                (LatArray < config.south) | 
+                (LonArray < config.west) | 
+                (LonArray > config.east)
+            ] = 0
+                
     
         # Clean up arrays
         M07ReflArray = None
@@ -464,6 +474,15 @@ def run(config):
                 (AfArray <= 9)
                 ] = 1
                 
+            # Apply geographic window, if specified
+            if config.has_window() : 
+                AfCon[
+                    (LatArray > config.north) | 
+                    (LatArray < config.south) | 
+                    (LonArray < config.west) | 
+                    (LonArray > config.east)
+                ] = 0
+                
             # Get coordinates of all active fire pixels    
             AfLatLons = get_coords_from_Con_array(AfCon, LatArray, LonArray)
             # Clean up arrays
@@ -491,6 +510,15 @@ def run(config):
                 (Af375Array <= 9)
                 ] = 1
             
+            # Apply geographic window, if specified
+            if config.has_window() : 
+                AfCon[
+                    (Lat375Array > config.north) | 
+                    (Lat375Array < config.south) | 
+                    (Lon375Array < config.west) | 
+                    (Lon375Array > config.east)
+                ] = 0
+                
             # Get coordinates of all active fire pixels    
             Af375LatLons = get_coords_from_Con_array(AfCon, Lat375Array, Lon375Array)
             # Clean up arrays
