@@ -61,7 +61,7 @@ class VIIRSConfig (object) :
             setattr(merged, p, getattr(thresh_vec, p))        
 
         # merge in the geographic window if present
-        if hasattr(template.north) : 
+        if template.has_window() : 
             merged.north = template.north 
             merged.south = template.south
             merged.east  = template.east
@@ -199,7 +199,7 @@ class VIIRSConfig (object) :
         if self.DBhost is not None : 
             ini.set("DataBaseInfo", "Host", self.DBhost)
 
-        if hasattr(self,"north") : 
+        if self.has_window() : 
             ini.add_section("GeogWindow")
             fmtfmt = '{}'
             ini.set("GeogWindow", "North", fltfmt.format(self.north)) 
@@ -218,7 +218,7 @@ class VIIRSConfig (object) :
 
     def has_window(self) : 
         """checks for presence of geographic window on this object"""
-        return hasattr(self,north)
+        return hasattr(self,"north")
         
     def get_vector(self) : 
         """returns the vector representation of the numeric parameters
