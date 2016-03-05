@@ -72,7 +72,12 @@ import subprocess
 import viirs_config as vc
 from pyhdf.SD import SD, SDC
 
-
+# Friendly names for relevant projections: 
+srids = { 
+  "WGS84" : 4326,
+  "Albers" : 102008,
+  "NLCD"   : 96630
+}
 
 # Prints the contents of an h5.
 def print_name(name):
@@ -199,7 +204,20 @@ def execute_query(config, queryText):
     cur.close()
     conn.close()
     print "End", queryText, get_time()
- 
+
+def execute_sql_file(config, filename):
+    print "Start", get_time()
+    ConnParam = postgis_conn_params(config)
+    conn = psycopg2.connect(ConnParam)
+    
+    with conn as cursor : 
+        cursor.execute(open(filename).read())
+    conn.commit()
+    # Close communication with the database
+    conn.close()
+    print "End", get_time()
+
+  
 def execute_check_4_activity(config, collectionDate):
     query_text = "SELECT viirs_check_4_activity('{0}', '{1}', '{2}');".format(config.DBschema, collectionDate, config.TemporalProximity)
     execute_query(config,query_text)
