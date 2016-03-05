@@ -207,14 +207,17 @@ def execute_query(config, queryText):
 
 def execute_sql_file(config, filename):
     print "Start", get_time()
-    ConnParam = postgis_conn_params(config)
-    conn = psycopg2.connect(ConnParam)
-    
-    with conn as cursor : 
-        cursor.execute(open(filename).read())
-    conn.commit()
-    # Close communication with the database
-    conn.close()
+
+    command = 'psql -h {0} -U {1} -d {2} -f {3}'.format(
+        config.DBhost,
+        config.DBuser,
+        config.DBname,
+        filename)
+    env = os.environ.copy()
+    env['PGPASSWORD'] = config.pwd
+    print command
+    subprocess.call(command, shell=True, env=env)
+
     print "End", get_time()
 
   

@@ -34,22 +34,23 @@ def project_fire_events_nlcd(config) :
     
 def get_ogr_pg_connection(config, schema=None, tablename=None) :
     if (schema is not None) and (tablename is not None) :  
-        conn = "PG:host={0} dbname={1} user={2} password={3} schema={4} table={5} mode=2".format(
+        conn = 'PG:host={0} dbname={1} user={2} password={3} schema="{4}" table={5} mode=2'.format(
             pipes.quote(config.DBhost),
             pipes.quote(config.DBname),
             pipes.quote(config.DBuser),
             pipes.quote(config.pwd),
-            pipes.quote(config.schema),
+            pipes.quote(schema),
             pipes.quote(tablename))
     else :
         conn = "PG:host={0} dbname={1} user={2} password={3}".format(
             pipes.quote(config.DBhost),
             pipes.quote(config.DBname),
-            pipes.quote(config.DBuser))
+            pipes.quote(config.DBuser),
+            pipes.quote(config.pwd))
     return conn
 
 def get_ogr_layername(schema, table, geom_column='geom') : 
-    return '"{0}".{1}({2})'.format(schema, table, geom_column)        
+    return '{0}.{1}({2})'.format(schema, table, geom_column)        
                         
 def create_fire_events_raster(config) : 
     """dumps the ground truth fire mask to disk, overwrites by rasterizing fire_events, 
@@ -64,7 +65,7 @@ def create_fire_events_raster(config) :
         pipes.quote(pg_connection),
         pipes.quote(fire_tiff))
     print command
-    subprocess.call(command)
+    subprocess.call(command,shell=True)
     
     # rasterize fire events
     pg_connection = get_ogr_pg_connection(config)
@@ -74,28 +75,27 @@ def create_fire_events_raster(config) :
        pipes.quote(pg_connection), 
        pipes.quote(fire_tiff))
     print command
-    subprocess.call(command)
+    subprocess.call(command, shell=True)
     
     # reload tiff to postgis raster, in the current schema.
     #
     # make a sql file
     fire_sql_file = os.path.join(config.ShapePath, 'fire_events_raster.sql')
     r2pgsql_exe = os.path.join(config.PostBin, 'raster2pgsql')
-    command='{0} -s {1} -t 100x100 {2} -q -I -C -Y {3}.fire_events_raster'.format(
+    command='{0} -s {1} -t 100x100 {2} -q -I -Y {3}.fire_events_raster'.format(
         pipes.quote(r2pgsql_exe),
         vt.srids['NLCD'],
         pipes.quote(fire_tiff),
         config.DBschema)
     fire_sql = open(fire_sql_file, 'w')
     print command
-    subprocess.call(command, stdout=fire_sql)
+    subprocess.call(command, stdout=fire_sql, shell=True)
     fire_sql.close()
     
+    # drop table if already exists...
+    query = 'DROP TABLE IF EXISTS "{0}".fire_events_raster;'.format(
+       config.DBschema)
+    vt.execute_query(config, query)
+
     # upload the sql file
     vt.execute_sql_file(config, fire_sql_file)
-    
-        
-    
-    
-    
-    
