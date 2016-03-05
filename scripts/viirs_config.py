@@ -99,8 +99,8 @@ class VIIRSConfig (object) :
         target.TextOut = ini.get("OutputFlags", "TextFile").lower()
         target.ShapeOut = ini.get("OutputFlags", "ShapeFile").lower()
         target.DatabaseOut = ini.get("OutputFlags", "PostGIS").lower()
-        target.ShapePath = ini.get("OutputFlags", "OutShapeDir").lower()
-        target.PostBin = ini.get("OutputFlags", "PostgresqlBin").lower()
+        target.ShapePath = ini.get("OutputFlags", "OutShapeDir")
+        target.PostBin = ini.get("OutputFlags", "PostgresqlBin")
         
         target.ImageDates = ini.get("ImageDates", "ImageDates").split(',')
         
@@ -172,8 +172,8 @@ class VIIRSConfig (object) :
         ini.set("OutputFlags", "TextFile", self.TextOut.lower())
         ini.set("OutputFlags", "ShapeFile", self.ShapeOut.lower())
         ini.set("OutputFlags", "PostGIS", self.DatabaseOut.lower())
-        ini.set("OutputFlags", "OutShapeDir", self.ShapePath.lower())
-        ini.set("OutputFlags", "PostgresqlBin",self.PostBin.lower())
+        ini.set("OutputFlags", "OutShapeDir", self.ShapePath)
+        ini.set("OutputFlags", "PostgresqlBin",self.PostBin)
         
         ini.add_section("ImageDates")
         ini.set("ImageDates", "ImageDates", ','.join(self.ImageDates))
