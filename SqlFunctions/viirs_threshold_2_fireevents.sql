@@ -21,14 +21,13 @@ DECLARE
   insert_confirmed text ; 
   update_collection text;
 BEGIN
-  -- Query selects all confirmed burned area detections from a particular 
+  -- Query selects all candidate burned area detections from a particular 
   -- satellite scene (collection_date).
   loop_query := 'SELECT a.* FROM ' || quote_ident(schema) || '.threshold_burned a ' ||
-    'WHERE collection_date = $1 ' ||
-      'AND confirmed_burn = TRUE';
+    'WHERE collection_date = $1 ';
   
-  -- Subquery (in parens) selects all points from all active fire groups (collections)
-  -- which meet the temporal criteria.
+  -- Subquery (in parens) selects all ActiveFire points from all fire groups 
+  -- (collections) which meet the temporal criteria.
   -- Main query checks to see if there is at least one point from the subquery
   -- which also matches the spatial criteria.
   -- While there is no index on the last_update field, the number of entries in the
@@ -42,7 +41,8 @@ BEGIN
       'WHERE fe.collection_id = fc.fid ' ||
         'AND fc.last_update >= $1 - $2 ' ||
         'AND fc.last_update <= $1 ' ||
-        'AND fc.active = TRUE) as tf ' ||
+        'AND fe.source = ' || quote_literal('ActiveFire') ||
+        ' AND fc.active = TRUE) as tf ' ||
     'WHERE ST_DWithin(ST_Transform($4, 102008), tf.geom, $3) LIMIT 1';
     
   insert_confirmed := 'INSERT INTO ' || quote_ident(schema) || '.fire_events ' ||
