@@ -201,7 +201,7 @@ def execute_active_fire_2_events(collectionDate, interval, distance):
     execute_query(query_text)
 
 def execute_threshold_2_events(collectionDate, interval, distance):
-    print "Start simple confirm burn", get_time()
+    print "Start VIIRS_threshold_2_fireevents", get_time()
     query_text = "SELECT VIIRS_threshold_2_fireevents(\'{0}\', \'{1}\', {2});".format(collectionDate, interval, distance)
     execute_query(query_text)
 
@@ -528,10 +528,10 @@ def run():
             #vacuum_analyze("active_fire")
     
             # simple confirm threshold burns 
-            print "\nPerform simple confirm burned area"
-            date_4db = datetime.datetime.strftime(H5Date, "%Y-%m-%d %H:%M:%S")
-            execute_simple_confirm_burns(date_4db, TemporalProximity, SpatialProximity)
-            #vacuum_analyze("threhold_burned")
+#            print "\nPerform simple confirm burned area"
+#            date_4db = datetime.datetime.strftime(H5Date, "%Y-%m-%d %H:%M:%S")
+#            execute_simple_confirm_burns(date_4db, TemporalProximity, SpatialProximity)
+#            #vacuum_analyze("threhold_burned")
     
             # threshold to fires events 
             print "\nEvaluate and copy thresholded burned area to fire events"
