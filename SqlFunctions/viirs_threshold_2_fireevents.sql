@@ -41,8 +41,7 @@ BEGIN
       'WHERE fe.collection_id = fc.fid ' ||
         'AND fc.last_update >= $1 - $2 ' ||
         'AND fc.last_update <= $1 ' ||
-        'AND fe.source = ' || quote_literal('ActiveFire') ||
-        ' AND fc.active = TRUE) as tf ' ||
+        'AND fe.source = ' || quote_literal('ActiveFire')) as tf ' ||
     'WHERE ST_DWithin(ST_Transform($4, 102008), tf.geom, $3) LIMIT 1';
     
   insert_confirmed := 'INSERT INTO ' || quote_ident(schema) || '.fire_events ' ||
