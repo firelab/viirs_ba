@@ -551,9 +551,9 @@ def run(config):
                 #vacuum_analyze(config,"active_fire")
         
             # check if fires are still active
-            print "\nChecking if fires are still active"
-            date_4db = datetime.datetime.strftime(H5Date, "%Y-%m-%d %H:%M:%S")
-            execute_check_4_activity(config, date_4db)
+            #print "\nChecking if fires are still active"
+            #date_4db = datetime.datetime.strftime(H5Date, "%Y-%m-%d %H:%M:%S")
+            #execute_check_4_activity(config, date_4db)
             
             # active fire to fires events 
             print "\nCopy active fire to fire events and create collections"

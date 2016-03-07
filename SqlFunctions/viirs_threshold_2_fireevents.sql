@@ -56,6 +56,10 @@ BEGIN
       'SET last_update = $1 ' || 
       'WHERE $2 = ' || quote_ident(schema) || '.fire_collections.fid' ;
 
+  confirm_point := 'UPDATE ' || quote_ident(schema) || '.threshold_burned ' ||
+        'SET confirmed_burn = TRUE ' || 
+        'WHERE fid = $1';
+
       
   FOR a_row IN EXECUTE loop_query USING collection 
   LOOP
@@ -65,6 +69,7 @@ BEGIN
     EXECUTE insert_confirmed USING a_row.latitude, a_row.longitude, a_row.geom, 
           dumrec.fc_fid, a_row.collection_date, a_row.pixel_size, a_row.band_i_m ; 
     EXECUTE update_collection USING a_row.collection_date, dumrec.fc_fid ; 
+    EXECUTE confirm_point USING a_row.fid ;
   END IF;
   END LOOP;
 return;
