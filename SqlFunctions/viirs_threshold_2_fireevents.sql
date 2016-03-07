@@ -21,10 +21,20 @@ DECLARE
   insert_confirmed text ; 
   update_collection text;
 BEGIN
+  -- Query selects all confirmed burned area detections from a particular 
+  -- satellite scene (collection_date).
   loop_query := 'SELECT a.* FROM ' || quote_ident(schema) || '.threshold_burned a ' ||
     'WHERE collection_date = $1 ' ||
       'AND confirmed_burn = TRUE';
-      
+  
+  -- Subquery (in parens) selects all points from all active fire groups (collections)
+  -- which meet the temporal criteria.
+  -- Main query checks to see if there is at least one point from the subquery
+  -- which also matches the spatial criteria.
+  -- While there is no index on the last_update field, the number of entries in the
+  -- fire_collections table is comparatively small.
+  -- In essense, this performs the confirmation a second time. This is necessary 
+  -- in order to identify a fire_collection.fid to assign the candidate point to.
   confirm_query := 'SELECT * from (SELECT fe.fid as fe_fid,  ' ||
            'fe.geom, fc.fid as fc_fid ' || 
       'FROM ' || quote_ident(schema) || '.fire_events fe, ' || 

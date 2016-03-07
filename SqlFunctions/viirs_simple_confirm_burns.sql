@@ -16,6 +16,13 @@ $BODY$
     distance INTEGER := $4;
     query text ; 
 BEGIN
+    -- subquery returns every row from threshold burned which meets the 
+    -- temporal criteria, whether it meets the spatial criteria or not.
+    -- every row returned by the subquery has its confirmed flag set 
+    -- to true
+    -- this has been identified as a bottleneck. One potential reason is 
+    -- that the active fire and threshold_burned tables become very large and
+    -- there is no index on the collection_date field on either one.
     query := 'UPDATE ' || quote_ident(schema) || '.threshold_burned ' ||
         'SET confirmed_burn = TRUE ' || 
         'FROM(' ||
