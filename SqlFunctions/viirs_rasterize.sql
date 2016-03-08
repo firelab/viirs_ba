@@ -1,4 +1,4 @@
-﻿CREATE OR REPLACE FUNCTION viirs_rasterize(schema text, gt_schema text, gt_table text) 
+CREATE OR REPLACE FUNCTION viirs_rasterize(schema text, gt_schema text, gt_table text) 
    RETURNS void AS
 $BODY$
     BEGIN
@@ -27,4 +27,3 @@ $BODY$
   COST 100 ; 
 ALTER FUNCTION viirs_rasterize(schema text,gt_schema text, gt_table text)
   OWNER to postgres ;
-

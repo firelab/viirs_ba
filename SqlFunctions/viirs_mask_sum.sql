@@ -1,4 +1,4 @@
-﻿CREATE OR REPLACE FUNCTION viirs_mask_sum(schema text, gt_schema text, gt_table text) 
+CREATE OR REPLACE FUNCTION viirs_mask_sum(schema text, gt_schema text, gt_table text) 
    RETURNS void AS
 $BODY$
     BEGIN

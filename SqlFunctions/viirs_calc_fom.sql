@@ -1,4 +1,4 @@
-﻿CREATE OR REPLACE FUNCTION viirs_calc_fom(schema text) 
+CREATE OR REPLACE FUNCTION viirs_calc_fom(schema text) 
    RETURNS float AS
 $BODY$
     DECLARE
