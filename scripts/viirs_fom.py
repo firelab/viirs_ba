@@ -10,8 +10,13 @@ In general, this module contains components to implement the following flow:
     + ratio the sum of the intersection pixels to the sum  of union pixels.
 """
 
+import glob
+import os.path
+import numpy as np
+import pandas as pd
 import psycopg2
 import VIIRS_threshold_reflCor_Bulk as vt
+import viirs_config as vc
 
 def project_fire_events_nlcd(config) :
     """Creates a new geometry column in the fire_events table and project to
@@ -70,14 +75,41 @@ def calc_ioveru_fom(config) :
     cur.close()
     conn.close()
     
-    return rows[0]
+    return rows[0][0]
     
     
 def do_ioveru_fom(config, gt_schema, gt_table) : 
     """performs the complete process for calculating the intersection over union
     figure of merit."""
     
+    project_fire_events_nlcd(config)
     create_fire_events_raster(config, gt_schema, gt_table)
     mask_sum(config, gt_schema, gt_table)
     return calc_ioveru_fom(config)
     
+def calc_all_ioveru_fom(run_datafile, gt_schema, gt_table) : 
+    """calculates the i over u figure of merit for a batch of previously
+    completed runs.
+    User supplies the path name of a previously written CSV file which 
+    describes a batch of runs. The directory containing this file must
+    also contain a bunch of run directories, each of which contains an
+    *.ini file for the run."""
+    # find where we are
+    base_dir = os.path.dirname(run_datafile)
+    if base_dir == '' : 
+        base_dir = '.'
+
+    runlist = pd.read_csv(run_datafile) 
+    fomdata = np.zeros_like(runlist['run_id'],dtype=np.float)
+
+    ini_files = glob.glob('{0}/*/*.ini'.format(base_dir))
+    for f in ini_files : 
+        config = vc.VIIRSConfig.load(f)
+        row = np.where(runlist['run_id'] == config.run_id)
+
+        fomdata[row] = do_ioveru_fom(config, gt_schema, gt_table)
+ 
+    runlist['fom'] = pd.Series(fomdata, index=runlist.index)
+    newname = 'new_{0}'.format(os.path.basename(run_datafile))
+    runlist.to_csv(os.path.join(base_dir, newname))
+

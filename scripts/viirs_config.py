@@ -19,6 +19,7 @@ file must be representable as a vector of values, while the other sections may v
 from collections import namedtuple
 from ConfigParser import ConfigParser
 import os.path
+import re
 
 
 float_vector_params = ['M07UB', 'M08LB', 'M08UB', 
@@ -126,7 +127,7 @@ class VIIRSConfig (object) :
             target.east  = ini.getfloat('GeogWindow','East')
             target.west  = ini.getfloat('GeogWindow','West')
         
-        target.run_id = cls.create_run_id(target)
+        target.parse_schema()
         
         return target
         
@@ -142,6 +143,11 @@ class VIIRSConfig (object) :
     def perturb_schema(self) :
         """modifies the schema name based on the run id"""
         self.DBschema = 'Run_{:04d}'.format(self.run_id)
+
+    def parse_schema(self) : 
+        """sets this object's run_id from the schema name"""
+        m = re.match('Run_([0-9]+)', self.DBschema) 
+        self.run_id = int(m.group(1))
         
     @classmethod
     def create_run_id(cls, obj) : 
