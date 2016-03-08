@@ -249,6 +249,13 @@ $BODY$
     
     EXECUTE 'CREATE INDEX ' || quote_ident('idx_' || name || '_threshold_burned_geom') || ' ON ' || 
        quote_ident(name) || '.threshold_burned USING gist (geom)';
+
+    --
+    -- Name: idx_fire_collection_last_update; Type: INDEX; Schema: public; Owner: postgres
+    --
+    
+    EXECUTE 'CREATE INDEX ' || quote_ident('idx_' || name || '_fire_collections_last_update') || ' ON ' || 
+       quote_ident(name) || '.fire_collections (last_update DESC NULLS LAST)';
        
     END
 $BODY$ 

@@ -231,7 +231,7 @@ def execute_active_fire_2_events(config, collectionDate):
     execute_query(config,query_text)
 
 def execute_threshold_2_events(config, collectionDate):
-    print "Start simple confirm burn", get_time()
+    print "Start VIIRS_threshold_2_fireevents", get_time()
     query_text = "SELECT VIIRS_threshold_2_fireevents('{0}', '{1}', '{2}', {3});".format(config.DBschema, collectionDate, config.TemporalProximity, config.SpatialProximity)
     execute_query(config,query_text)
 
@@ -415,6 +415,16 @@ def run(config):
             ((M10ReflArray - M10ReflFact[1])/M10ReflFact[0] < 65528) &
             ((M11ReflArray - M11ReflFact[1])/M11ReflFact[0] < 65528)
             ] = 1
+
+        # Apply geographic window, if specified
+        if config.has_window() : 
+            BaCon[
+                (LatArray > config.north) | 
+                (LatArray < config.south) | 
+                (LonArray < config.west) | 
+                (LonArray > config.east)
+            ] = 0
+                
     
         # Clean up arrays
         M07ReflArray = None
@@ -485,6 +495,15 @@ def run(config):
                 (AfArray <= 9)
                 ] = 1
                 
+            # Apply geographic window, if specified
+            if config.has_window() : 
+                AfCon[
+                    (LatArray > config.north) | 
+                    (LatArray < config.south) | 
+                    (LonArray < config.west) | 
+                    (LonArray > config.east)
+                ] = 0
+                
             # Get coordinates of all active fire pixels    
             AfLatLons = get_coords_from_Con_array(AfCon, LatArray, LonArray)
             # Clean up arrays
@@ -512,6 +531,15 @@ def run(config):
                 (Af375Array <= 9)
                 ] = 1
             
+            # Apply geographic window, if specified
+            if config.has_window() : 
+                AfCon[
+                    (Lat375Array > config.north) | 
+                    (Lat375Array < config.south) | 
+                    (Lon375Array < config.west) | 
+                    (Lon375Array > config.east)
+                ] = 0
+                
             # Get coordinates of all active fire pixels    
             Af375LatLons = get_coords_from_Con_array(AfCon, Lat375Array, Lon375Array)
             # Clean up arrays
@@ -544,9 +572,9 @@ def run(config):
                 #vacuum_analyze(config,"active_fire")
         
             # check if fires are still active
-            print "\nChecking if fires are still active"
-            date_4db = datetime.datetime.strftime(H5Date, "%Y-%m-%d %H:%M:%S")
-            execute_check_4_activity(config, date_4db)
+            #print "\nChecking if fires are still active"
+            #date_4db = datetime.datetime.strftime(H5Date, "%Y-%m-%d %H:%M:%S")
+            #execute_check_4_activity(config, date_4db)
             
             # active fire to fires events 
             print "\nCopy active fire to fire events and create collections"
@@ -555,11 +583,11 @@ def run(config):
             #vacuum_analyze(config,"active_fire")
     
             # simple confirm threshold burns 
-            print "\nPerform simple confirm burned area"
-            date_4db = datetime.datetime.strftime(H5Date, "%Y-%m-%d %H:%M:%S")
-            execute_simple_confirm_burns(config, date_4db)
-            #vacuum_analyze(config,"threshold_burned")
-    
+#            print "\nPerform simple confirm burned area"
+#            date_4db = datetime.datetime.strftime(H5Date, "%Y-%m-%d %H:%M:%S")
+#            execute_simple_confirm_burns(config, date_4db)
+#            #vacuum_analyze(config,"threshold_burned")
+   
             # threshold to fires events 
             print "\nEvaluate and copy thresholded burned area to fire events"
             date_4db = datetime.datetime.strftime(H5Date, "%Y-%m-%d %H:%M:%S")

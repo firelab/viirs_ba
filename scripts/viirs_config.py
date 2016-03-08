@@ -59,7 +59,14 @@ class VIIRSConfig (object) :
         # merge in the vector data
         for p in vector_param_names : 
             setattr(merged, p, getattr(thresh_vec, p))        
-        
+
+        # merge in the geographic window if present
+        if template.has_window() : 
+            merged.north = template.north 
+            merged.south = template.south
+            merged.east  = template.east
+            merged.west  = template.west
+
         # handle changes
         merged.run_id      = cls.create_run_id(merged)
         merged.ShapePath = merged.perturb_dir(template.ShapePath)
@@ -112,6 +119,12 @@ class VIIRSConfig (object) :
             target.DBhost = ini.get("DataBaseInfo", "Host")
         else : 
             target.DBhost = None
+
+        if ini.has_section('GeogWindow') : 
+            target.north = ini.getfloat('GeogWindow','North')
+            target.south = ini.getfloat('GeogWindow','South')
+            target.east  = ini.getfloat('GeogWindow','East')
+            target.west  = ini.getfloat('GeogWindow','West')
         
         target.run_id = cls.create_run_id(target)
         
@@ -185,6 +198,14 @@ class VIIRSConfig (object) :
         ini.set("DataBaseInfo", "password", self.pwd)
         if self.DBhost is not None : 
             ini.set("DataBaseInfo", "Host", self.DBhost)
+
+        if self.has_window() : 
+            ini.add_section("GeogWindow")
+            fmtfmt = '{}'
+            ini.set("GeogWindow", "North", fltfmt.format(self.north)) 
+            ini.set("GeogWindow", "South", fltfmt.format(self.south)) 
+            ini.set("GeogWindow", "East", fltfmt.format(self.east)) 
+            ini.set("GeogWindow", "West", fltfmt.format(self.west)) 
         
         return ini
         
@@ -194,6 +215,10 @@ class VIIRSConfig (object) :
         f = file(filename, 'w')
         ini.write(f)
         f.close() 
+
+    def has_window(self) : 
+        """checks for presence of geographic window on this object"""
+        return hasattr(self,"north")
         
     def get_vector(self) : 
         """returns the vector representation of the numeric parameters
