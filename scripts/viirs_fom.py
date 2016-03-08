@@ -10,11 +10,8 @@ In general, this module contains components to implement the following flow:
     + ratio the sum of the intersection pixels to the sum  of union pixels.
 """
 
-import subprocess
-import pipes
-import os.path
+import psycopg2
 import VIIRS_threshold_reflCor_Bulk as vt
-import viirs_config as vc
 
 def project_fire_events_nlcd(config) :
     """Creates a new geometry column in the fire_events table and project to
@@ -31,71 +28,56 @@ def project_fire_events_nlcd(config) :
     # project existing data into new column
     query = 'UPDATE "{0}".fire_events SET geom_nlcd=ST_Transform(geom,{1})'.format(config.DBschema, vt.srids["NLCD"])
     vt.execute_query(config, query)
-    
-def get_ogr_pg_connection(config, schema=None, tablename=None) :
-    if (schema is not None) and (tablename is not None) :  
-        conn = 'PG:host={0} dbname={1} user={2} password={3} schema="{4}" table={5} mode=2'.format(
-            pipes.quote(config.DBhost),
-            pipes.quote(config.DBname),
-            pipes.quote(config.DBuser),
-            pipes.quote(config.pwd),
-            pipes.quote(schema),
-            pipes.quote(tablename))
-    else :
-        conn = "PG:host={0} dbname={1} user={2} password={3}".format(
-            pipes.quote(config.DBhost),
-            pipes.quote(config.DBname),
-            pipes.quote(config.DBuser),
-            pipes.quote(config.pwd))
-    return conn
-
-def get_ogr_layername(schema, table, geom_column='geom') : 
-    return '{0}.{1}({2})'.format(schema, table, geom_column)        
-                        
-def create_fire_events_raster(config) : 
+                            
+def create_fire_events_raster(config, gt_schema, gt_table) : 
     """dumps the ground truth fire mask to disk, overwrites by rasterizing fire_events, 
-    reloads the table to postgis"""
-    
-    # on-disk fire events raster file
-    fire_tiff = os.path.join(config.ShapePath, 'fire_events_raster.tif')
-    
-    # dump ground truth to disk
-    pg_connection = get_ogr_pg_connection(config, 'gt', 'burnmaskyy')
-    command = 'gdal_translate -of GTIFF {0} {1}'.format(
-        pipes.quote(pg_connection),
-        pipes.quote(fire_tiff))
-    print command
-    subprocess.call(command,shell=True)
-    
-    # rasterize fire events
-    pg_connection = get_ogr_pg_connection(config)
-    pg_layer      = get_ogr_layername(config.DBschema, 'fire_events', 'geom_nlcd')
-    command = 'gdal_rasterize -burn 1 -init 0 -l {0} -tr 375 375 {1} {2}'.format(
-       pipes.quote(pg_layer),
-       pipes.quote(pg_connection), 
-       pipes.quote(fire_tiff))
-    print command
-    subprocess.call(command, shell=True)
-    
-    # reload tiff to postgis raster, in the current schema.
-    #
-    # make a sql file
-    fire_sql_file = os.path.join(config.ShapePath, 'fire_events_raster.sql')
-    r2pgsql_exe = os.path.join(config.PostBin, 'raster2pgsql')
-    command='{0} -s {1} -t 100x100 {2} -q -I -Y {3}.fire_events_raster'.format(
-        pipes.quote(r2pgsql_exe),
-        vt.srids['NLCD'],
-        pipes.quote(fire_tiff),
-        config.DBschema)
-    fire_sql = open(fire_sql_file, 'w')
-    print command
-    subprocess.call(command, stdout=fire_sql, shell=True)
-    fire_sql.close()
-    
-    # drop table if already exists...
-    query = 'DROP TABLE IF EXISTS "{0}".fire_events_raster;'.format(
-       config.DBschema)
+    reloads the table to postgis
+    This ensures that the result is aligned to the specified ground truth 
+    table."""
+    query = "SELECT viirs_rasterize('{0}', '{1}', '{2}')".format(
+          config.DBschema, gt_schema, gt_table)
     vt.execute_query(config, query)
+    
+def mask_sum(config, gt_schema, gt_table) : 
+    """adds the mask values from the fire_events_raster to the values in the ground truth raster.
+    
+    The fire events raster is in config.DBschema. The ground truth raster to use
+    is provided in gt_schema and gt_table. If the supplied masks have only 0 and 1
+    in them, as they should, then the sum raster should have only 0, 1, and 2.
+    The logical "or" function between the two masks is the set of pixels having a
+    nonzero value. The logical "and" function is the set of pixels having the value
+    two."""
+    query = "SELECT viirs_mask_sum('{0}', '{1}', '{2}')".format(
+         config.DBschema, gt_schema, gt_table)
+    vt.execute_query(config,query)
+    
+def calc_ioveru_fom(config) :  
+    """calculates the intersection over union figure of merit.
+    This function assumes that the mask_sum raster already exists in the 
+    database. Returns a floating point number from 0..1"""
+    query = "SELECT viirs_calc_fom('{0}')".format(config.DBschema)
+    
+    # now, need to execute a query that returns a single result.
+    ConnParam = vt.postgis_conn_params(config)
+    conn = psycopg2.connect(ConnParam)
+    # Open a cursor to perform database operations
+    cur = conn.cursor()
+    cur.execute(query)
+    rows = cur.fetchall()
 
-    # upload the sql file
-    vt.execute_sql_file(config, fire_sql_file)
+    conn.commit()
+    # Close communication with the database
+    cur.close()
+    conn.close()
+    
+    return rows[0]
+    
+    
+def do_ioveru_fom(config, gt_schema, gt_table) : 
+    """performs the complete process for calculating the intersection over union
+    figure of merit."""
+    
+    create_fire_events_raster(config, gt_schema, gt_table)
+    mask_sum(config, gt_schema, gt_table)
+    return calc_ioveru_fom(config)
+    
