@@ -18,6 +18,13 @@ import psycopg2
 import VIIRS_threshold_reflCor_Bulk as vt
 import viirs_config as vc
 
+
+def extract_fire_mask(config, gt_schema, gt_table) : 
+    """Creates a geometry column and populates with pixel centers where pixel value=1"""
+    query = "SELECT viirs_get_mask_pts('{0}','{1}', 'rast', 'geom', {2})".format(
+          gt_schema, gt_table, vt.srids['NLCD'])
+    vt.execute_query(config, query) 
+
 def project_fire_events_nlcd(config) :
     """Creates a new geometry column in the fire_events table and project to
     NLCD coordinates."""
@@ -39,8 +46,8 @@ def create_fire_events_raster(config, gt_schema, gt_table) :
     reloads the table to postgis
     This ensures that the result is aligned to the specified ground truth 
     table."""
-    query = "SELECT viirs_rasterize('{0}', '{1}', '{2}')".format(
-          config.DBschema, gt_schema, gt_table)
+    query = "SELECT viirs_rasterize('{0}', '{1}', '{2}', {3})".format(
+          config.DBschema, gt_schema, gt_table, config.SpatialProximity)
     vt.execute_query(config, query)
     
 def mask_sum(config, gt_schema, gt_table) : 
