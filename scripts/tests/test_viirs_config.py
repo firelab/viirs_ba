@@ -247,5 +247,5 @@ class TestVIIRSConfig (unittest.TestCase) :
     def test_perturbed_dir(self) : 
         base_dir = '/hey/there/Ima/path'
         new_dir  = self.config.perturb_dir(base_dir)
-        self.assertEqual(os.path.join('/hey/there/Ima',str(self.config.run_id)),new_dir)
+        self.assertEqual(os.path.join('/hey/there/Ima','Run_{0}'.format(self.config.run_id)),new_dir)
                 
