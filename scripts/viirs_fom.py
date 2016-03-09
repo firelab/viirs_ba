@@ -106,7 +106,7 @@ def calc_all_ioveru_fom(run_datafile, gt_schema, gt_table) :
     if base_dir == '' : 
         base_dir = '.'
 
-    runlist = pd.read_csv(run_datafile) 
+    runlist = pd.read_csv(run_datafile, index_col=0) 
     fomdata = np.zeros_like(runlist['run_id'],dtype=np.float)
 
     ini_files = glob.glob('{0}/*/*.ini'.format(base_dir))
