@@ -290,10 +290,10 @@ def run(config):
     #Loop through BaseDir, look for h5s and load arrays
     count = 0
     start_group = datetime.datetime.now()
-    for ImageDate in config.ImageDates:
+    for ImageDate in config.SortedImageDates:
         start_indiviudal = datetime.datetime.now()
         count  = count + 1
-        print "Processing number:", count, "of:", len(config.ImageDates)
+        print "Processing number:", count, "of:", len(config.SortedImageDates)
         print ImageDate + '\n'
         #Read band 7
         h5 = glob.glob(os.path.join(config.BaseDir, "SVM07_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.h5"))[0]
@@ -609,7 +609,7 @@ def run(config):
         
         gc.collect()
         print "Done Processing:", ImageDate,  
-        print "Number:", count, "of:", len(config.ImageDates)
+        print "Number:", count, "of:", len(config.SortedImageDates)
         end_indiviudal = datetime.datetime.now()
         print end_indiviudal.strftime("%Y%m%d %H:%M:%S")
         print "Elapsed time for individual:", (end_indiviudal - start_indiviudal).total_seconds(), "seconds"

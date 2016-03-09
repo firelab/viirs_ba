@@ -72,6 +72,7 @@ class VIIRSConfig (object) :
         merged.run_id      = cls.create_run_id(merged)
         merged.ShapePath = merged.perturb_dir(template.ShapePath)
         merged.perturb_schema() 
+        merged.sort_dates()
         
         
         return merged
@@ -128,6 +129,7 @@ class VIIRSConfig (object) :
             target.west  = ini.getfloat('GeogWindow','West')
         
         target.parse_schema()
+        target.sort_dates()
         
         return target
         
@@ -221,6 +223,9 @@ class VIIRSConfig (object) :
         f = file(filename, 'w')
         ini.write(f)
         f.close() 
+        
+    def sort_dates(self) : 
+        self.SortedImageDates = sorted(self.ImageDates)
 
     def has_window(self) : 
         """checks for presence of geographic window on this object"""
