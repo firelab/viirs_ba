@@ -41,7 +41,7 @@ $BODY$
 	EXECUTE 'ALTER TABLE ' || quote_ident(schema) || '.fire_events_raster ' ||
 	        'ADD COLUMN rast_750 raster'  ; 
 
-
+    DISCARD TEMP ;
     CREATE TEMPORARY TABLE newrasters (rid integer, rast_750 raster) ; 
 
     EXECUTE  'INSERT INTO newrasters ' || 
@@ -91,4 +91,37 @@ $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100 ; 
 ALTER FUNCTION viirs_rasterize_750(schema text,gt_schema text, gt_table text, distance float)
+  OWNER to postgres ;
+
+CREATE OR REPLACE FUNCTION viirs_rasterize_merge(schema text) 
+   RETURNS void AS
+$BODY$
+   BEGIN
+   
+   EXECUTE 'ALTER TABLE ' || quote_ident(schema) || '.fire_events_raster ' ||
+          'DROP COLUMN IF EXISTS rast' ;
+
+   EXECUTE 'ALTER TABLE ' || quote_ident(schema) || '.fire_events_raster ' || 
+          'ADD COLUMN rast raster' ;
+
+   EXECUTE 'UPDATE ' || quote_ident(schema) || '.fire_events_raster '||
+          'SET rast=rast_375 ' ||
+          'WHERE rast_375 IS NOT NULL and rast_750 IS NULL'; 
+
+   EXECUTE 'UPDATE ' || quote_ident(schema) || '.fire_events_raster ' || 
+          'SET rast=ST_Rescale(rast_750, 375., -375) '  ||
+          'WHERE rast_375 IS NULL and rast_750 IS NOT NULL' ; 
+
+   EXECUTE 'UPDATE ' || quote_ident(schema) || '.fire_events_raster ' || 
+          'SET rast=ST_SetBandNoDataValue(' ||
+             'ST_MapAlgebra(rast_375, ST_Rescale(rast_750,375.,-375.), ' ||
+                     quote_literal('(([rast1]=1) OR ([rast2]=1))::int') ||', '|| 
+                     quote_literal('8BUI') ||','||
+                     quote_literal('FIRST') || '), 3.) ' || 
+           'WHERE rast_375 IS NOT NULL and rast_750 IS NOT NULL' ;     
+   END
+$BODY$ 
+  LANGUAGE plpgsql VOLATILE
+  COST 100 ; 
+ALTER FUNCTION viirs_rasterize_merge(schema text)
   OWNER to postgres ;

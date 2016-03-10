@@ -46,8 +46,16 @@ def create_fire_events_raster(config, gt_schema, gt_table) :
     reloads the table to postgis
     This ensures that the result is aligned to the specified ground truth 
     table."""
-    query = "SELECT viirs_rasterize('{0}', '{1}', '{2}', {3})".format(
+
+    query = "SELECT viirs_rasterize_375('{0}', '{1}', '{2}', {3})".format(
           config.DBschema, gt_schema, gt_table, config.SpatialProximity)
+    vt.execute_query(config, query)
+
+    query = "SELECT viirs_rasterize_750('{0}', '{1}', '{2}', {3})".format(
+          config.DBschema, gt_schema, gt_table, config.SpatialProximity)
+    vt.execute_query(config, query)
+
+    query = "SELECT viirs_rasterize_merge('{0}')".format(config.DBschema)
     vt.execute_query(config, query)
     
 def mask_sum(config, gt_schema, gt_table) : 
