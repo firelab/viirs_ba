@@ -43,7 +43,7 @@ BEGIN
         '(latitude, longitude, geom, source, collection_id, ' ||
         'collection_date, pixel_size, band_i_m) ' || 
         'VALUES($1, $2, ' ||
-        'ST_Multi(ST_Transform($3, 102008)), ' ||
+        'ST_Transform($3, 102008), ' ||
         quote_literal('ActiveFire') ||
         ' , $4, $5, $6, $7)';
 
@@ -60,7 +60,7 @@ BEGIN
       '(latitude, longitude, geom, source, collection_id, ' || 
       'collection_date, pixel_size, band_i_m) ' || 
       'VALUES($1, $2, ' ||
-      'ST_Multi(ST_Transform($3, 102008)), ' ||
+      'ST_Transform($3, 102008), ' ||
       quote_literal('ActiveFire') || 
       ', $4, $5, $6, $7)';    
 
