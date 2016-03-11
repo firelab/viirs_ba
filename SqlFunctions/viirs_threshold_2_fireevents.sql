@@ -33,6 +33,7 @@ BEGIN
          'WHERE ' ||
              -- glue and seed criteria
              'fe.collection_id = fc.fid AND ' || 
+             'fe.source = ' || quote_literal('ActiveFire') || ' AND ' || 
              't.collection_date = $1 AND ' || 
 
              -- temporal criterion
