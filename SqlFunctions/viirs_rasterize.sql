@@ -1,4 +1,4 @@
-﻿CREATE OR REPLACE FUNCTION viirs_rasterize_375(schema text, gt_schema text, gt_table text, distance float) 
+CREATE OR REPLACE FUNCTION viirs_rasterize_375(schema text, gt_schema text, gt_table text, distance float) 
    RETURNS void AS
 $BODY$
     BEGIN

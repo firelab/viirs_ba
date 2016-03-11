@@ -1,4 +1,4 @@
-﻿-- given a schema/table/column containing raster data, creates a 
+-- given a schema/table/column containing raster data, creates a 
 -- geometry multipoint column contaning pixel centers for only those 
 -- points where the pixel value == 1. (mask is true) 
 CREATE OR REPLACE FUNCTION viirs_get_mask_pts(schema text, tbl text, rast text, geom text, srid int) 
