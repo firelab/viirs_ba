@@ -66,8 +66,8 @@ BEGIN
   
   confirm_point := 'UPDATE ' || quote_ident(schema) || '.threshold_burned t ' || 
       'SET confirmed_burn = TRUE ' || 
-      'FROM (SELECT t_fid FROM confirmed_pts) foo ' || 
-      'WHERE t.fid = t_fid' ; 
+      'FROM confirmed_pts cp ' || 
+      'WHERE t.fid = cp.t_fid' ; 
 
   EXECUTE 'CREATE TEMPORARY TABLE confirmed_pts AS ' || confirm_query
       USING collection, recent, distance ; 
