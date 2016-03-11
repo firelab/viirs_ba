@@ -149,7 +149,8 @@ class VIIRSConfig (object) :
     def parse_schema(self) : 
         """sets this object's run_id from the schema name"""
         m = re.match('Run_([0-9]+)', self.DBschema) 
-        self.run_id = int(m.group(1))
+        if m is not None : 
+            self.run_id = int(m.group(1))
         
     @classmethod
     def create_run_id(cls, obj) : 
