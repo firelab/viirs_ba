@@ -58,12 +58,12 @@ BEGIN
             quote_ident(schema) || '.threshold_burned t ' ||
       'WHERE t.fid = cp.t_fid'  ;
 
-  update_collection := 'UPDATE ' || quote_ident(schema) || '.fire_collections fc' || 
+  update_collection := 'UPDATE ' || quote_ident(schema) || '.fire_collections fc ' || 
       'SET last_update = $1 ' || 
       'FROM (SELECT DISTINCT fc_fid FROM confirmed_pts) foo ' || 
       'WHERE fc.fid = fc_fid' ;
   
-  confirm_point := 'UPDATE ' || quote_ident(schema) || '.threshold_burned ' || 
+  confirm_point := 'UPDATE ' || quote_ident(schema) || '.threshold_burned t ' || 
       'SET confirmed_burn = TRUE ' || 
       'FROM (SELECT t_fid FROM confirmed_pts) foo ' || 
       'WHERE t.fid = t_fid' ; 
