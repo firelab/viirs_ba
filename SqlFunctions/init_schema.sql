@@ -251,12 +251,40 @@ $BODY$
        quote_ident(name) || '.threshold_burned USING gist (geom)';
 
     --
-    -- Name: idx_fire_collection_last_update; Type: INDEX; Schema: public; Owner: postgres
+    -- Name: idx_fire_collections_last_update; Type: INDEX; Schema: public; Owner: postgres
     --
     
     EXECUTE 'CREATE INDEX ' || quote_ident('idx_' || name || '_fire_collections_last_update') || ' ON ' || 
        quote_ident(name) || '.fire_collections (last_update DESC NULLS LAST)';
-       
+
+    --
+    -- Name: idx_fire_collections_fid; Type: INDEX; Schema: public; Owner: postgres
+    --
+    
+    EXECUTE 'CREATE INDEX ' || quote_ident('idx_' || name || '_fire_collections_fid') || ' ON ' || 
+       quote_ident(name) || '.fire_collections (fid)';
+
+    --
+    -- Name: idx_fire_events_collection_id; Type: INDEX; Schema: public; Owner: postgres
+    --
+    
+    EXECUTE 'CREATE INDEX ' || quote_ident('idx_' || name || '_fire_events_collection_id') || ' ON ' || 
+       quote_ident(name) || '.fire_events (collection_id)';
+
+    --
+    -- Name: idx_active_fire_collection_date; Type: INDEX; Schema: public; Owner: postgres
+    --
+    
+    EXECUTE 'CREATE INDEX ' || quote_ident('idx_' || name || '_active_fire_collection_date') || ' ON ' || 
+       quote_ident(name) || '.active_fire (collection_date)';
+
+    --
+    -- Name: idx_threshold_burned_collection_date; Type: INDEX; Schema: public; Owner: postgres
+    --
+    
+    EXECUTE 'CREATE INDEX ' || quote_ident('idx_' || name || '_threshold_burned_collection_date') || ' ON ' || 
+       quote_ident(name) || '.threshold_burned (collection_date)';
+              
     END
 $BODY$ 
   LANGUAGE plpgsql VOLATILE
