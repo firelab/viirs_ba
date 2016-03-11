@@ -88,7 +88,7 @@ $BODY$
         'fid bigint NOT NULL, ' || 
         'latitude real, ' || 
         'longitude real, ' || 
-        'geom geometry(MultiPoint,102008), ' || 
+        'geom geometry(Point,102008), ' || 
         'source character(10), ' || 
         'collection_id bigint, ' || 
         'collection_date timestamp without time zone, ' ||
