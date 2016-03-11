@@ -38,7 +38,7 @@ BEGIN
 
              -- temporal criterion
              'fc.last_update >= $1 - $2 AND ' ||
-             'fc.last_update <  $1 AND ' || 
+             'fc.last_update <= $1 AND ' || 
 
              -- spatial criterion
              'ST_DWithin(ST_Transform(t.geom, 102008), fe.geom, $3) ' || 
