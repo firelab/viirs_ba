@@ -71,6 +71,7 @@ import gc
 import subprocess
 import viirs_config as vc
 from pyhdf.SD import SD, SDC
+from collections import namedtuple
 
 # Friendly names for relevant projections: 
 srids = { 
@@ -78,6 +79,8 @@ srids = {
   "Albers" : 102008,
   "NLCD"   : 96630
 }
+
+Point = namedtuple('Point', ['latitude','longitude'])
 
 # Prints the contents of an h5.
 def print_name(name):
@@ -279,8 +282,227 @@ def get_time():
     ts = time.time()
     dt = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
     return dt
+
+
+class FileSet (object) : 
+    """Represents a set of files containing satellite data from the same scene.
+    Collects filenames only, and associates them with a common date.
+    """
+        
+    @classmethod
+    def from_imagedate(cls, imagedate_str) : 
+        target=cls()
+        target.ImageDate = imagedate_str
+        return target
+
+    @classmethod
+    def from_date(cls, dt) : 
+        """creates a new fileset object from a datetime object"""
+        target = cls() 
+        target._dt = dt
+        return target
+                
+    @classmethod
+    def parse_filename(cls, filename) : 
+        """given a filename that matches the expected pattern, compute and 
+        return a FileSet object."""
+        dt = filename.split("_")[2][1:9] + f.split("_")[3][1:7]
+        dt = datetime.datetime.strptime(dt, '%Y%m%d%H%M%S')
+        return cls.from_date(dt)
+        
+        
+    def get_datetime(self) :
+        """compute and return the datetime object associated with this file set.""" 
+        # pattern:
+        # d20140715_t1921193,
+        if not hasattr(self, '_dt') : 
+            components = self.ImageDate.split("_")
+            dt = components[0][1:] + components[1][1:-1]
+            self._dt = datetime.datetime.strptime(dt, '%Y%m%d%H%M%S')
+        return self._dt
+        
+    def get_out_date(self) : 
+        """a formatted date string to include in output file names"""
+        if not hasattr(self, "_out_date")  :
+            self._out_date = datetime.datetime.strftime(self.get_datetime(), 
+                                                       "%Y%m%d_%H%M%S")
+                                                       
+        return self._out_date
+
+        
+    def get_sql_date(self) : 
+        """compute and return the SQL formatted date string associated with 
+        this file set."""
+        if not hasattr(self,"_date_4db") : 
+            self._date_4db = datetime.datetime.strftime(self.get_datetime(), 
+                     "%Y-%m-%d %H:%M:%S")
+        return self._date_4db
+        
+    def get_imagedate(self) : 
+        if not hasattr(self,"ImageDate") : 
+            self.ImageDate = "d{0:%Y%m%d}_t{0:%H%M%S}".format(self._dt)
+        return self.ImageDate
+        
+    def find_hdf_file(self, basedir, prefix,extension="h5") : 
+        """locates an hdf4/5 file in the basedir having a specific prefix,
+        returns the full pathname to the file"""
+        h5 = glob.glob(os.path.join(basedir, 
+           "{0}_{1}_e???????_b00001_c????????????????????_all-_dev.{2}".format(
+              prefix,self.get_imagedate(), extension)))[0]
+        return h5
+        
+    def get_file_names(self, basedir) : 
+        """attempt to locate all files in this set, return a dictionary of filenames"""
+        if not hasattr(self, "_filenames") : 
+            self._filenames = {} 
+            fileset = [ ("SVM07_npp", 'h5') , 
+                        ("SVM08_npp", 'h5') , 
+                        ("SVM10_npp", 'h5') , 
+                        ("SVM11_npp", 'h5') , 
+                        ("GMTCO_npp", 'h5') , 
+                        ("GITCO_npp", 'h5') ,
+                        ("VF375_npp", 'hdf'),
+                        ("AVAFO_npp", 'h5') ]
+                        
+            for pre, ext in fileset :
+                try : 
+                    self._filenames[pre] = self.find_hdf_file(basedir, pre, ext)
+                except : 
+                    pass
+            
+        return self._filenames
+        
+        
+
+
+class GeoFile(object) :
+    """A geofile can apply a geographic window and produce a list of lat/lon
+    values associated with confirmed values"""
+    
+    def apply_window(self, config, confirmed) : 
+        """applies a geographic window specified in the config to the confirmed array
+        Note that the confirmed array must be the same shape as this object's 
+        latitude and longitude arrays."""
+        if config.has_window() : 
+            confirmed[
+                (self.LatArray > config.north) | 
+                (self.LatArray < config.south) | 
+                (self.LonArray < config.west) | 
+                (self.LonArray > config.east)
+            ] = 0
+            
+    def make_list(self, confirmed) : 
+        """produces a list of tuples containing the lat/lon coordinates
+        corresponding to true values in the confirmed mask.
+        This will only be successful if the confirmed array and the Lat/LonArrays
+        are related."""
+        idx = np.where(confirmed == 1) 
+        return zip(self.LatArray[idx],self.LonArray[idx])
+        
+    def day_pixels(self, zenith) : 
+        """given a specified solar zenith angle defining "sundown", returns 
+        where the day pixels are"""
+        return self.SolZen < zenith
+        
+
+
+class GeoFile750(GeoFile) : 
+    def __init__(self) :
+        self.pixel_size = 750
+        self.band_i_m   = 'm'
+        
+    @classmethod
+    def load(cls,filename) : 
+        target = cls()
+        GeoHdf = h5py.File(filename,"r")
+        target.LatArray = GeoHdf['All_Data/VIIRS-MOD-GEO-TC_All/Latitude'][:]
+        target.LonArray = GeoHdf['All_Data/VIIRS-MOD-GEO-TC_All/Longitude'][:]
+        target.SolZen = GeoHdf['All_Data/VIIRS-MOD-GEO-TC_All/SolarZenithAngle'][:]
+        return target 
+        
+class GeoFile375(GeoFile) : 
+    def __init__(self) : 
+        self.pixel_size = 375
+        self.band_i_m   = 'i'
+    
+    @classmethod
+    def load(cls, filename) :
+        target = cls()
+        GeoHdf = h5py.File(h5,"r")
+        target.LatArray = GeoHdf['All_Data/VIIRS-IMG-GEO-TC_All/Latitude'][:]
+        target.LonArray = GeoHdf['All_Data/VIIRS-IMG-GEO-TC_All/Longitude'][:]
+        return target
+
+        
+    
+class ActiveFire(object) :
+    """Encapsulates ActiveFire data, regardless of resolution"""
+    
+    # AfArray codes (these apply to I and M bands )):
+    # 0 = missing input data
+    # 1 = not processed (obsolete)
+    # 2 = not processed (obsolete)
+    # 3 = water
+    # 4 = cloud
+    # 5 = non-fire
+    # 6 = unknown
+    # 7 = fire (low confidence)
+    # 8 = fire (nominal confidence)
+    # 9 = fire (high confidence)
+    # FILL VALUES: NA_UINT8_FILL = 255
+    # MISS_UINT8_FILL = 254
+    # ONBOARD_PT_UINT8_FILL = 253
+    # ONGROUND_PT_UINT8_FILL = 252
+    # ERR_UINT8_FILL = 251
+    # ELLIPSOID_UINT8_FILL = 250
+    # VDNE_UINT8_FILL = 249
+    # SOUB_UINT8_FILL = 248
+
+    def get_conditional(self) : 
+        """computes if necessary and returns the "conditional" array for this object""" 
+        if not hasattr(self, 'conditional') : 
+            self.conditional = np.zeros_like(self.AfArray)
+
+            self.conditional[
+                (self.AfArray >= 7) &
+                (self.AfArray <= 9)
+                ] = 1
+        return self.conditional
+        
+    def get_non_fire(self) : 
+        return (self.AfArray == 5)
+
     
     
+class ActiveFire750 (ActiveFire) : 
+    def __init__(self) : 
+        self.pixel_size = 750
+        self.band_i_m = 'm'
+
+    @classmethod
+    def load(cls, filename) :
+        """Reads in a 750m VIIRS HDF 5 file from disk."""
+        target = cls()  
+        target._AfHdf = h5py.File(filename, "r")
+        target.AfArray = target._AfHdf['All_Data/VIIRS-AF-EDR_All/fireMask'][:]
+        target.AfDateTime = h5_date_time(os.path.basename(filename))
+        return target
+        
+    
+class ActiveFire375 (ActiveFire) : 
+    def __init__(self) : 
+        self.pixel_size = 375
+        self.band_i_m = 'i'
+        
+    @classmethod
+    def load(cls, filename) :
+        """Reads in a 375m VIIRS HDF4 file from disk."""
+        target = cls() 
+        target._AF375hdf = SD(filename, SDC.READ)
+        target._AF375_fm = target._AF375hdf.select('fire mask')
+        target.AfArray = target._AF375_fm[:]
+        target.AfDateTime = h5_date_time(os.path.basename(filename))
+        return target
 
 def run(config):
     
@@ -295,95 +517,51 @@ def run(config):
         count  = count + 1
         print "Processing number:", count, "of:", len(config.SortedImageDates)
         print ImageDate + '\n'
-        #Read band 7
-        h5 = glob.glob(os.path.join(config.BaseDir, "SVM07_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.h5"))[0]
-        print "Reading band 07:", os.path.basename(h5)
         
-        M07Hdf = h5py.File(h5, "r")
+        fileset = FileSet.from_imagedate(ImageDate)
+        files = fileset.get_file_names()
+
+        #Read band 7
+        #h5 = glob.glob(os.path.join(config.BaseDir, "SVM07_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.h5"))[0]
+        print "Reading band 07: ", os.path.basename(files['SVM07_npp'])        
+        M07Hdf = h5py.File(files['SVM07_npp'], "r")
         M07ReflArray = M07Hdf['All_Data/VIIRS-M7-SDR_All/Reflectance'][:]
         M07ReflFact = M07Hdf['All_Data/VIIRS-M7-SDR_All/ReflectanceFactors'][:]
 
         # Read band 8
-        h5 = glob.glob(os.path.join(config.BaseDir, "SVM08_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.h5"))[0]
-        print "Reading band 08:", os.path.basename(h5)
-        M08Hdf = h5py.File(h5, "r")
+        #h5 = glob.glob(os.path.join(config.BaseDir, "SVM08_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.h5"))[0]
+        print "Reading band 08:", os.path.basename(files['SVM08_npp'])
+        M08Hdf = h5py.File(files['SVM08_npp'], "r")
         M08ReflArray = M08Hdf['All_Data/VIIRS-M8-SDR_All/Reflectance'][:]
         M08ReflFact = M08Hdf['All_Data/VIIRS-M8-SDR_All/ReflectanceFactors'][:]
 
         # Read band 10
-        h5 = glob.glob(os.path.join(config.BaseDir, "SVM10_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.h5"))[0]
-        print "Reading band 10:", os.path.basename(h5)
-        M10Hdf = h5py.File(h5, "r")
+        #h5 = glob.glob(os.path.join(config.BaseDir, "SVM10_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.h5"))[0]
+        print "Reading band 10:", os.path.basename(files['SVM10_npp'])
+        M10Hdf = h5py.File(files['SVM10_npp'], "r")
         M10ReflArray = M10Hdf['All_Data/VIIRS-M10-SDR_All/Reflectance'][:]
         M10ReflFact = M10Hdf['All_Data/VIIRS-M10-SDR_All/ReflectanceFactors'][:]
 
         # Read band 11
-        h5 = glob.glob(os.path.join(config.BaseDir, "SVM11_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.h5"))[0]
-        print "Reading band 11:", os.path.basename(h5)
-        M11Hdf = h5py.File(h5, "r")
+        #h5 = glob.glob(os.path.join(config.BaseDir, "SVM11_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.h5"))[0]
+        print "Reading band 11:", os.path.basename(files['SVM11_npp'])
+        M11Hdf = h5py.File(files['SVM11_npp'], "r")
         M11ReflArray = M11Hdf['All_Data/VIIRS-M11-SDR_All/Reflectance'][:]
         M11ReflFact = M11Hdf['All_Data/VIIRS-M11-SDR_All/ReflectanceFactors'][:]
 
         # Read GMTCO
-        h5 = glob.glob(os.path.join(config.BaseDir, "GMTCO_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.h5"))[0]
-        print "Reading GMTCO Latitude and Longitude:", os.path.basename(h5)
-        GeoHdf = h5py.File(h5,"r")
-        LatArray = GeoHdf['All_Data/VIIRS-MOD-GEO-TC_All/Latitude'][:]
-        LonArray = GeoHdf['All_Data/VIIRS-MOD-GEO-TC_All/Longitude'][:]
-        print "Reading GMTCO Solar Zenith:", os.path.basename(h5)
-        SolZen750 = GeoHdf['All_Data/VIIRS-MOD-GEO-TC_All/SolarZenithAngle'][:]
+        geo_750 = GeoFile750.load(files['GMTCO_npp'])
         
         if config.use375af.lower() == "y":
             # Read GITCO
-            h5 = glob.glob(os.path.join(config.BaseDir, "GITCO_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.h5"))[0]
-            print "Reading GITCO Latitude and Longitude:", os.path.basename(h5)
-            GeoHdf = h5py.File(h5,"r")
-            Lat375Array = GeoHdf['All_Data/VIIRS-IMG-GEO-TC_All/Latitude'][:]
-            Lon375Array = GeoHdf['All_Data/VIIRS-IMG-GEO-TC_All/Longitude'][:]
-            print "Reading GITCO Solar Zenith:", os.path.basename(h5)
-            #SolZen375 = GeoHdf['All_Data/VIIRS-IMG-GEO-TC_All/SolarZenithAngle'][:]
+            geo_375 = GeoFile375.load(files['GITCO_npp'])
             
             # Read VF375
-            h4 = glob.glob(os.path.join(config.BaseDir, "VF375_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.hdf"))[0]
-            print "Reading VF375:", os.path.basename(h5)
-            AF375hdf = SD(h4, SDC.READ)
-            AF375_fm = AF375hdf.select('fire mask')
-            Af375Array = AF375_fm[:]
-            Af375DateTime = h5_date_time(os.path.basename(h4))
+            af_375 = ActiveFire375.load(files['VF375_npp'])
         
         # Read AVAFO
-        h5 = glob.glob(os.path.join(config.BaseDir, "AVAFO_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.h5"))[0]
-        print "Reading AFAFO:", os.path.basename(h5)
-        AfHdf = h5py.File(h5, "r")
-        AfArray = AfHdf['All_Data/VIIRS-AF-EDR_All/fireMask'][:]
-        AfDateTime = h5_date_time(os.path.basename(h5))
-                # AfArray codes (these apply to I and M bands )):
-                # 0 = missing input data
-                # 1 = not processed (obsolete)
-                # 2 = not processed (obsolete)
-                # 3 = water
-                # 4 = cloud
-                # 5 = non-fire
-                # 6 = unknown
-                # 7 = fire (low confidence)
-                # 8 = fire (nominal confidence)
-                # 9 = fire (high confidence)
-                # FILL VALUES: NA_UINT8_FILL = 255
-                # MISS_UINT8_FILL = 254
-                # ONBOARD_PT_UINT8_FILL = 253
-                # ONGROUND_PT_UINT8_FILL = 252
-                # ERR_UINT8_FILL = 251
-                # ELLIPSOID_UINT8_FILL = 250
-                # VDNE_UINT8_FILL = 249
-                # SOUB_UINT8_FILL = 248
-    
-    
-        H5Date = h5_date_time(os.path.basename(h5))
-        H5DateStr = datetime.datetime.strftime(H5Date, "%Y%m%d_%H%M%S")
-        # Print h5 contents
-        ##GeoHdf.visit(print_name)
-        ##M08Hdf.visit(print_name)
-        
+        af_750 = ActiveFire750.load(files['AVAFO_npp'])
+            
         # Correct reflectance values by applying scale factors
         M07ReflArray = M07ReflArray*M07ReflFact[0] + M07ReflFact[1]
         M08ReflArray = M08ReflArray*M08ReflFact[0] + M08ReflFact[1]
@@ -408,8 +586,8 @@ def run(config):
             (M11ReflArray > config.M11LB) &
             (np.where(M11ReflArray != 0,((M08ReflArray-config.RthSub)/M11ReflArray),config.RthLB-1) >= config.RthLB) &
             (np.where(M11ReflArray != 0,((M08ReflArray-config.RthSub)/M11ReflArray),config.Rth+1) < config.Rth) &
-            (AfArray == 5) &
-            (SolZen750 < config.MaxSolZen) &   #this should supress nigth pixels
+            (af_750.get_non_fire()) &
+            (geo_750.day_pixels(config.MaxSolZen)) &   #this should supress night pixels
             ((M07ReflArray - M07ReflFact[1])/M07ReflFact[0] < 65528) &
             ((M08ReflArray - M08ReflFact[1])/M08ReflFact[0] < 65528) &
             ((M10ReflArray - M10ReflFact[1])/M10ReflFact[0] < 65528) &
@@ -417,13 +595,7 @@ def run(config):
             ] = 1
 
         # Apply geographic window, if specified
-        if config.has_window() : 
-            BaCon[
-                (LatArray > config.north) | 
-                (LatArray < config.south) | 
-                (LonArray < config.west) | 
-                (LonArray > config.east)
-            ] = 0
+        geo_750.apply_window(config,BaCon)
                 
     
         # Clean up arrays
@@ -435,7 +607,6 @@ def run(config):
         M08ReflFact = None
         M10ReflFact = None
         M11ReflFact = None
-        SolZen750 = None
         del M07ReflArray
         del M08ReflArray
         del M10ReflArray
@@ -444,28 +615,23 @@ def run(config):
         del M08ReflFact
         del M10ReflFact
         del M11ReflFact
-        del SolZen750
             
         
         # Get Burned area coordinates as an array
-        BaLatLons = get_coords_from_Con_array(BaCon, LatArray, LonArray)
+        BaOut_list = geo_750.make_list(BaCon)
         # Clean up arrays
         BaCon = None
         del BaCon
         
-        # Convert Burned area coordinates array to a list
-        BaOut_list = array2list(BaLatLons)
-        # Clean up arrays
-        BaLatLons = None
-        del BaLatLons
-        
         # Burned area output to text
         if config.TextOut == "y":
-            write_coordinates2text(config, BaOut_list, "BaOut_" + H5DateStr, H5Date)
+            write_coordinates2text(config, BaOut_list, 
+                 "BaOut_" + fileset.get_out_date(), fileset.get_datetime())
 
         # Burned area output to PostGIS 
         if config.DatabaseOut == "y":
-            push_list_to_postgis(config, BaOut_list, H5Date, "threshold_burned", "750", "m")
+            push_list_to_postgis(config, BaOut_list, 
+                 fileset.get_datetime(), "threshold_burned", "750", "m")
             #vacuum_analyze(config,"threshold_burned")
     
             # Clean up arrays
@@ -485,27 +651,14 @@ def run(config):
             # #######################################################################
             
             #Set up Active Fire Conditional array: AfCon
-            AfCon = np.zeros_like(AfArray)
-            
-            # Get the coordinates of any active fire pixels using a the same method as 
-            # the burned area. 
-            # Cast any pixels as one that are active fire
-            AfCon[
-                (AfArray >= 7) &
-                (AfArray <= 9)
-                ] = 1
-                
+            AfCon = af_750.get_conditional()
+                            
             # Apply geographic window, if specified
-            if config.has_window() : 
-                AfCon[
-                    (LatArray > config.north) | 
-                    (LatArray < config.south) | 
-                    (LonArray < config.west) | 
-                    (LonArray > config.east)
-                ] = 0
+            geo_750.apply_window(config, AfCon)
                 
-            # Get coordinates of all active fire pixels    
-            AfLatLons = get_coords_from_Con_array(AfCon, LatArray, LonArray)
+            # Get coordinates of all active fire pixels 
+            AfLatLons = geo_750.make_list(AfCon)  
+             
             # Clean up arrays
             AfCon = None
             del AfCon
@@ -522,53 +675,42 @@ def run(config):
             # #######################################################################
             
             #Set up Active Fire Conditional array: AfCon
-            AfCon = np.zeros_like(Af375Array)
-            # Get the coordinates of any active fire pixels using a the same method as 
-            # the burned area. 
-            # Cast any pixels as one that are active fire
-            AfCon[
-                (Af375Array >= 7) &
-                (Af375Array <= 9)
-                ] = 1
+            AfCon = af_375.get_conditional()
             
             # Apply geographic window, if specified
-            if config.has_window() : 
-                AfCon[
-                    (Lat375Array > config.north) | 
-                    (Lat375Array < config.south) | 
-                    (Lon375Array < config.west) | 
-                    (Lon375Array > config.east)
-                ] = 0
+            geo_375.apply_window(AfCon)
                 
-            # Get coordinates of all active fire pixels    
-            Af375LatLons = get_coords_from_Con_array(AfCon, Lat375Array, Lon375Array)
+            # Get coordinates of all active fire pixels 
+            Af375Out_list = geo_375.make_list(AfCon) 
+              
             # Clean up arrays
             AfCon = None
             del AfCon
             
-            # Convert coordinate array to list
-            Af375Out_list = array2list(Af375LatLons)
-            # Clean up arrays
-            Af375LatLons = None
-            del Af375LatLons
         if config.TextOut == "y":
             if config.use750af == "y":  
                 # Write active fire 750 coordinates to text
-                write_coordinates2text(config, AfOut_list, "AfOut_" + H5DateStr, H5Date)
+                write_coordinates2text(config, AfOut_list, 
+                       "AfOut_" + fileset.get_out_date(), 
+                       fileset.get_datetime() )
             if config.use375af == "y":    
                 # Write active fire 375 coordinates to text
-                write_coordinates2text(config, Af375Out_list, "AfOut_" + H5DateStr, H5Date)
+                write_coordinates2text(config, Af375Out_list, 
+                       "AfOut_" + fileset.get_out_date(), 
+                       fileset.get_datetime())
 
         # Push active fire coordinates to PostGIS
         if config.DatabaseOut == "y":
             if config.use375af == "y":
                 # write 375 active fire to DB
-                push_list_to_postgis(config,Af375Out_list, H5Date, "active_fire", "375", "i")
+                push_list_to_postgis(config,Af375Out_list, 
+                     fileset.get_datetime(), "active_fire", "375", "i")
                 #vacuum_analyze(config,"active_fire")
             
             if config.use750af == "y":
                 # write 750 active fire to DB
-                push_list_to_postgis(config,AfOut_list, H5Date, "active_fire", "750", "m")
+                push_list_to_postgis(config,AfOut_list, 
+                     fileset.get_datetime(), "active_fire", "750", "m")
                 #vacuum_analyze(config,"active_fire")
         
             # check if fires are still active
@@ -578,8 +720,7 @@ def run(config):
             
             # active fire to fires events 
             print "\nCopy active fire to fire events and create collections"
-            date_4db = datetime.datetime.strftime(H5Date, "%Y-%m-%d %H:%M:%S")
-            execute_active_fire_2_events(config, date_4db)
+            execute_active_fire_2_events(config, fileset.get_sql_date())
             #vacuum_analyze(config,"active_fire")
     
             # simple confirm threshold burns 
@@ -590,8 +731,7 @@ def run(config):
    
             # threshold to fires events 
             print "\nEvaluate and copy thresholded burned area to fire events"
-            date_4db = datetime.datetime.strftime(H5Date, "%Y-%m-%d %H:%M:%S")
-            execute_threshold_2_events(config, date_4db)
+            execute_threshold_2_events(config, fileset.get_sql_date())
 
             vacuum_analyze(config,"active_fire")
             vacuum_analyze(config,"threshold_burned")
@@ -600,12 +740,8 @@ def run(config):
         # Clean up arrays
         AfOut_list = None
         del AfOut_list
-        AfArray = None
-        del AfArray
         Af375Out_list = None
         del Af375Out_list
-        Af375Array = None
-        del Af375Array
         
         gc.collect()
         print "Done Processing:", ImageDate,  
