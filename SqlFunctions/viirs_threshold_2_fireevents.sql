@@ -14,11 +14,14 @@ DECLARE
   collection timestamp without time zone := $2; 
   recent interval := $3;
   distance integer := $4; 
+  added record ; 
   confirm_query text ; 
   confirm_point text ; 
   insert_confirmed text ; 
   update_collection text;
 BEGIN
+
+  RAISE NOTICE 'Interval = %', recent ;
   
   -- This will return one row for each confirmed "threshold_burned" point in the 
   -- specified collection, paired with exactly one fire collection via exactly one 
@@ -33,11 +36,12 @@ BEGIN
          'WHERE ' ||
              -- glue and seed criteria
              'fe.collection_id = fc.fid AND ' || 
+             'fe.source = ' || quote_literal('ActiveFire') || ' AND ' || 
              't.collection_date = $1 AND ' || 
 
              -- temporal criterion
              'fc.last_update >= $1 - $2 AND ' ||
-             'fc.last_update <  $1 AND ' || 
+             'fc.last_update <= $1 AND ' || 
 
              -- spatial criterion
              'ST_DWithin(ST_Transform(t.geom, 102008), fe.geom, $3) ' || 
@@ -45,6 +49,7 @@ BEGIN
         'GROUP BY t.fid) confirmed ' ||
      'WHERE fe.fid = fe_fid AND ' ||
         'fe.collection_id = fc.fid' ;
+
 
 
     
@@ -65,12 +70,15 @@ BEGIN
   
   confirm_point := 'UPDATE ' || quote_ident(schema) || '.threshold_burned t ' || 
       'SET confirmed_burn = TRUE ' || 
-      'FROM (SELECT t_fid FROM confirmed_pts) foo ' || 
-      'WHERE t.fid = t_fid' ; 
+      'FROM confirmed_pts cp ' || 
+      'WHERE t.fid = cp.t_fid' ; 
 
   EXECUTE 'CREATE TEMPORARY TABLE confirmed_pts AS ' || confirm_query
       USING collection, recent, distance ; 
       
+  EXECUTE 'SELECT count(*) as c FROM confirmed_pts' INTO added ; 
+
+  RAISE NOTICE 'adding % points.', added.c ; 
   EXECUTE insert_confirmed ; 
   EXECUTE update_collection USING collection ; 
   EXECUTE confirm_point ;     

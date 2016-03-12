@@ -10,7 +10,6 @@ In general, this module contains components to implement the following flow:
     + ratio the sum of the intersection pixels to the sum  of union pixels.
 """
 
-import glob
 import os.path
 import numpy as np
 import pandas as pd
@@ -116,13 +115,12 @@ def calc_all_ioveru_fom(run_datafile, gt_schema, gt_table) :
 
     runlist = pd.read_csv(run_datafile, index_col=0) 
     fomdata = np.zeros_like(runlist['run_id'],dtype=np.float)
+    config_list = vc.VIIRSConfig.load_batch(base_dir)
 
-    ini_files = glob.glob('{0}/*/*.ini'.format(base_dir))
-    for f in ini_files : 
-        config = vc.VIIRSConfig.load(f)
-        row = np.where(runlist['run_id'] == config.run_id)
+    for c in config_list : 
+        row = np.where(runlist['run_id'] == c.run_id)
 
-        fomdata[row] = do_ioveru_fom(config, gt_schema, gt_table)
+        fomdata[row] = do_ioveru_fom(c, gt_schema, gt_table)
  
     runlist['fom'] = pd.Series(fomdata, index=runlist.index)
     newname = 'new_{0}'.format(os.path.basename(run_datafile))
