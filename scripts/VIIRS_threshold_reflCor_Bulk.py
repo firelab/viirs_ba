@@ -280,7 +280,35 @@ def get_time():
     dt = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
     return dt
     
-    
+def output_shape_files(config) : 
+    """produces the shapefile products in the specified output folder"""
+
+    if not os.path.exists(config.ShapePath):
+        os.makedirs(config.ShapePath)
+
+    print "Exporting to point shapefile:"
+    Pgsql2shpExe = os.path.join(config.PostBin, "pgsql2shp")
+    shp = config.ShapePath + '/' + 'fire_collection_point_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S')    
+
+    query = 'SELECT a.*, b.fid as col_id, b.active FROM "{0}".fire_events a, "{0}".fire_collections b WHERE a.collection_id = b.fid;'.format(config.DBschema)
+    if config.DBhost is None : 
+        command =  '{0} -f {1} -h localhost -u {2} -P {3} {4} {5}'.format(pipes.quote(Pgsql2shpExe), shp, config.DBuser, config.pwd, config.DBname, pipes.quote(query))
+    else : 
+        command =  '{0} -f {1} -h {6} -u {2} -P {3} {4} {5}'.format(pipes.quote(Pgsql2shpExe), shp, config.DBuser, config.pwd, config.DBname, pipes.quote(query), config.DBhost)
+            
+    print command
+    subprocess.call(command, shell = True)
+
+    print "Exporting to polygon shapefile:"
+    shp = config.ShapePath + '/' + 'fire_collection_poly_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S')    
+    query = 'SELECT ST_Multi(ST_Union(ST_Expand(geom, 375))) as geom, collection_id FROM "{0}".fire_events GROUP BY collection_id;'.format(config.DBschema)
+
+    if config.DBhost is None : 
+        command =  '{0} -f {1} -h localhost -u {2} -P {3} {4} {5}'.format(pipes.quote(Pgsql2shpExe), shp, config.DBuser, config.pwd, config.DBname, pipes.quote(query))
+    else : 
+        command =  '{0} -f {1} -h {6} -u {2} -P {3} {4} {5}'.format(pipes.quote(Pgsql2shpExe), shp, config.DBuser, config.pwd, config.DBname, pipes.quote(query), config.DBhost)
+    print command
+    subprocess.call(command, shell = True)
 
 def run(config):
     
@@ -617,40 +645,14 @@ def run(config):
 
     # Output shapefile
     if config.ShapeOut == "y":
-        print "Exporting to point shapefile:"
-        if not os.path.exists(config.ShapePath):
-            os.makedirs(config.ShapePath)
-        shp = config.ShapePath + '/' + 'fire_collection_point_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S')    
-        Pgsql2shpExe = os.path.join(config.PostBin, "pgsql2shp")
-        query = 'SELECT a.*, b.fid as col_id, b.active FROM "{0}".fire_events a, "{0}".fire_collections b WHERE a.collection_id = b.fid;'.format(config.DBschema)
-        if config.DBhost is None : 
-            command =  '{0} -f {1} -h localhost -u {2} -P {3} {4} {5}'.format(pipes.quote(Pgsql2shpExe), shp, config.DBuser, config.pwd, config.DBname, pipes.quote(query))
-        else : 
-            command =  '{0} -f {1} -h {6} -u {2} -P {3} {4} {5}'.format(pipes.quote(Pgsql2shpExe), shp, config.DBuser, config.pwd, config.DBname, pipes.quote(query), config.DBhost)
-            
-        print command
-        subprocess.call(command, shell = True)
+        output_shape_files(config)
 
-        print "Exporting to polygon shapefile:"
-        if not os.path.exists(config.ShapePath):
-            os.makedirs(config.ShapePath)
-        shp = config.ShapePath + '/' + 'fire_collection_poly_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S')    
-        Pgsql2shpExe = os.path.join(config.PostBin, "pgsql2shp")
-        query = 'SELECT ST_Multi(ST_Union(ST_Expand(geom, 375))) as geom, collection_id FROM "{0}".fire_events GROUP BY collection_id;'.format(config.DBschema)
-        if config.DBhost is None : 
-            command =  '{0} -f {1} -h localhost -u {2} -P {3} {4} {5}'.format(pipes.quote(Pgsql2shpExe), shp, config.DBuser, config.pwd, config.DBname, pipes.quote(query))
-        else : 
-            command =  '{0} -f {1} -h {6} -u {2} -P {3} {4} {5}'.format(pipes.quote(Pgsql2shpExe), shp, config.DBuser, config.pwd, config.DBname, pipes.quote(query), config.DBhost)
-        print command
-        subprocess.call(command, shell = True)
-
-	config.save(os.path.join(config.ShapePath, '{0}_{1}.ini'.format(config.DBname,config.DBschema)))
+    config.save(os.path.join(config.ShapePath, '{0}_{1}.ini'.format(config.DBname,config.DBschema)))
 
     end_group = datetime.datetime.now()
     print end_group.strftime("%Y%m%d %H:%M:%S")
     print "Elapsed time for group:", (end_group - start_group).total_seconds(), "seconds"
 
-    print "Done"
     print "Done"
     
 ################################################################################
