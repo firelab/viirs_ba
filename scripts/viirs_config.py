@@ -133,6 +133,9 @@ class VIIRSConfig (object) :
         
         return target
         
+    def get_sql_interval(self) :  
+        """returns a string to represent temporalproximity as sql interval"""
+        return "{0} days".format(self.TemporalProximity)
         
     def perturb_dir(self, orig_dir) :
         """sets a new directory name based on the run_id of this object and an

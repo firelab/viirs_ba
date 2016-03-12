@@ -222,22 +222,22 @@ def execute_sql_file(config, filename):
 
   
 def execute_check_4_activity(config, collectionDate):
-    query_text = "SELECT viirs_check_4_activity('{0}', '{1}', '{2}');".format(config.DBschema, collectionDate, config.TemporalProximity)
+    query_text = "SELECT viirs_check_4_activity('{0}', '{1}', '{2}');".format(config.DBschema, collectionDate, config.get_sql_interval())
     execute_query(config,query_text)
  
 def execute_active_fire_2_events(config, collectionDate):
     print "Start active_fire to fire_events", get_time()
-    query_text = "SELECT VIIRS_activefire_2_fireevents('{0}', '{1}', '{2}', {3});".format(config.DBschema, collectionDate, config.TemporalProximity, config.SpatialProximity)
+    query_text = "SELECT VIIRS_activefire_2_fireevents('{0}', '{1}', '{2}', {3});".format(config.DBschema, collectionDate, config.get_sql_interval(), config.SpatialProximity)
     execute_query(config,query_text)
 
 def execute_threshold_2_events(config, collectionDate):
     print "Start VIIRS_threshold_2_fireevents", get_time()
-    query_text = "SELECT VIIRS_threshold_2_fireevents('{0}', '{1}', '{2}', {3});".format(config.DBschema, collectionDate, config.TemporalProximity, config.SpatialProximity)
+    query_text = "SELECT VIIRS_threshold_2_fireevents('{0}', '{1}', '{2}', {3});".format(config.DBschema, collectionDate, config.get_sql_interval(), config.SpatialProximity)
     execute_query(config,query_text)
 
 def execute_simple_confirm_burns(config, collectionDate):
     print "Start threshold_burned to fire_events", get_time()
-    query_text = "SELECT VIIRS_simple_confirm_burns('{0}', '{1}', '{2}', {3});".format(config.DBschema, collectionDate, config.TemporalProximity, config.SpatialProximity)
+    query_text = "SELECT VIIRS_simple_confirm_burns('{0}', '{1}', '{2}', {3});".format(config.DBschema, collectionDate, config.get_sql_interval(), config.SpatialProximity)
     execute_query(config,query_text)
 
  
