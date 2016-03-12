@@ -1,6 +1,9 @@
 import VIIRS_threshold_reflCor_Bulk as vt
 import viirs_config as vc 
 import datetime
+import glob
+import sys
+import multiprocessing as mp
 
 def delete_confirmed(config) : 
     """wipe out fire events and collections"""
@@ -28,3 +31,33 @@ def confirm_date(config, datestring) :
     vt.execute_active_fire_2_events(config, db_date)
     vt.execute_threshold_2_events(config, db_date)
 
+
+def reconfirm_run(config) : 
+    """re-computes fire_events and fire_collections table for entire run"""
+    delete_confirmed(config)
+    for d in config.SortedImageDates : 
+        confirm_date(config, d)
+
+
+def reconfirm_batch(base_dir, workers=1) : 
+    """re-computes fire_events and fire_collections for every run in this batch"""
+    ini_files = glob.glob('{0}/*/*.ini'.format(base_dir))
+    config_list = [vc.VIIRSConfig.load(i) for i in ini_files ]
+    
+    if workers > 1 : 
+        mypool = mp.Pool(processes=workers)
+        mypool.map(reconfirm_run, config_list)
+    else : 
+        for c in config_list : 
+            reconfirm_run(c)
+    
+
+if __name__ == '__main__' : 
+    if len(sys.argv) not in [2,3] : 
+        print "Usage: {0} base_directory [workers]".format(sys.argv[0])
+        sys.exit() 
+
+    if len(sys.argv) == 3 : 
+        reconfirm_batch(sys.argv[1],int(sys.argv[2]))
+    else : 
+        reconfirm_batch(sys.argv[1])
