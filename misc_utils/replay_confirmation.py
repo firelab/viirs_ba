@@ -41,8 +41,7 @@ def reconfirm_run(config) :
 
 def reconfirm_batch(base_dir, workers=1) : 
     """re-computes fire_events and fire_collections for every run in this batch"""
-    ini_files = glob.glob('{0}/*/*.ini'.format(base_dir))
-    config_list = [vc.VIIRSConfig.load(i) for i in ini_files ]
+    config_list = vc.VIIRSConfig.load_batch(base_dir)
     
     if workers > 1 : 
         mypool = mp.Pool(processes=workers)

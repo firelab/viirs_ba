@@ -18,6 +18,7 @@ file must be representable as a vector of values, while the other sections may v
 """
 from collections import namedtuple
 from ConfigParser import ConfigParser
+import glob
 import os.path
 import re
 
@@ -76,6 +77,15 @@ class VIIRSConfig (object) :
         
         
         return merged
+
+    @classmethod
+    def load_batch(cls, base_dir) : 
+        """explores all subdirectories of base_dir for ini_files, loads
+        them, and returns them as a list."""
+        ini_files = glob.glob('{0}/*/*.ini'.format(base_dir))
+        config_list = [cls.load(i) for i in ini_files ]
+        return config_list
+
         
     @classmethod
     def load(cls, filename) : 
