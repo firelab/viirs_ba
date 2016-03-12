@@ -14,11 +14,14 @@ DECLARE
   collection timestamp without time zone := $2; 
   recent interval := $3;
   distance integer := $4; 
+  added record ; 
   confirm_query text ; 
   confirm_point text ; 
   insert_confirmed text ; 
   update_collection text;
 BEGIN
+
+  RAISE NOTICE 'Interval = %', recent ;
   
   -- This will return one row for each confirmed "threshold_burned" point in the 
   -- specified collection, paired with exactly one fire collection via exactly one 
@@ -48,6 +51,7 @@ BEGIN
         'fe.collection_id = fc.fid' ;
 
 
+
     
   insert_confirmed := 'INSERT INTO ' || quote_ident(schema) || '.fire_events ' ||
       '(latitude, longitude, geom, source, collection_id, ' ||
@@ -72,6 +76,9 @@ BEGIN
   EXECUTE 'CREATE TEMPORARY TABLE confirmed_pts AS ' || confirm_query
       USING collection, recent, distance ; 
       
+  EXECUTE 'SELECT count(*) as c FROM confirmed_pts' INTO added ; 
+
+  RAISE NOTICE 'adding % points.', added.c ; 
   EXECUTE insert_confirmed ; 
   EXECUTE update_collection USING collection ; 
   EXECUTE confirm_point ;     
