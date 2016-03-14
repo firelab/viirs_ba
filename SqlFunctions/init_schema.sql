@@ -272,6 +272,13 @@ $BODY$
        quote_ident(name) || '.fire_events (collection_id)';
 
     --
+    -- Name: idx_fire_events_source; Type: INDEX; Schema: public; Owner: postgres
+    --
+    
+    EXECUTE 'CREATE INDEX ' || quote_ident('idx_' || name || '_fire_events_source') || ' ON ' || 
+       quote_ident(name) || '.fire_events (source)';
+
+    --
     -- Name: idx_active_fire_collection_date; Type: INDEX; Schema: public; Owner: postgres
     --
     
