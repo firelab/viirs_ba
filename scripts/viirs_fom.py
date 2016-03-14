@@ -120,7 +120,7 @@ def calc_all_ioveru_fom(run_datafile, gt_schema, gt_table, workers=1) :
         mypool = mp.Pool(processes=workers) 
         fom = mypool.map(workerfunc, config_list)
 
-    for i in len(config_list) : 
+    for i in range(len(config_list)) : 
         row = np.where(runlist['run_id'] == config_list[i].run_id)
         fomdata[row] = fom[i]
  
