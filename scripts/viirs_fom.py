@@ -14,6 +14,8 @@ import os.path
 import numpy as np
 import pandas as pd
 import psycopg2
+import multiprocessing as mp
+import functools as ft
 import VIIRS_threshold_reflCor_Bulk as vt
 import viirs_config as vc
 
@@ -28,17 +30,9 @@ def project_fire_events_nlcd(config) :
     """Creates a new geometry column in the fire_events table and project to
     NLCD coordinates."""
     
-    # start clean
-    query = 'ALTER TABLE "{0}".fire_events DROP COLUMN IF EXISTS geom_nlcd'.format(config.DBschema)
+    query = "SELECT viirs_nlcd_fire_events('{0}', {1})".format(config.DBschema, vt.srids["NLCD"])
     vt.execute_query(config, query)
-    
-    # make new column
-    query = 'ALTER TABLE "{0}".fire_events ADD COLUMN geom_nlcd geometry(MultiPoint,{1})'.format(config.DBschema,vt.srids["NLCD"])
-    vt.execute_query(config, query)
-    
-    # project existing data into new column
-    query = 'UPDATE "{0}".fire_events SET geom_nlcd=ST_Transform(geom,{1})'.format(config.DBschema, vt.srids["NLCD"])
-    vt.execute_query(config, query)
+
                             
 def create_fire_events_raster(config, gt_schema, gt_table) : 
     """dumps the ground truth fire mask to disk, overwrites by rasterizing fire_events, 
@@ -92,7 +86,7 @@ def calc_ioveru_fom(config) :
     return rows[0][0]
     
     
-def do_ioveru_fom(config, gt_schema, gt_table) : 
+def do_ioveru_fom(gt_schema, gt_table, config) : 
     """performs the complete process for calculating the intersection over union
     figure of merit."""
     
@@ -101,7 +95,7 @@ def do_ioveru_fom(config, gt_schema, gt_table) :
     mask_sum(config, gt_schema, gt_table)
     return calc_ioveru_fom(config)
     
-def calc_all_ioveru_fom(run_datafile, gt_schema, gt_table) : 
+def calc_all_ioveru_fom(run_datafile, gt_schema, gt_table, workers=1) : 
     """calculates the i over u figure of merit for a batch of previously
     completed runs.
     User supplies the path name of a previously written CSV file which 
@@ -117,10 +111,18 @@ def calc_all_ioveru_fom(run_datafile, gt_schema, gt_table) :
     fomdata = np.zeros_like(runlist['run_id'],dtype=np.float)
     config_list = vc.VIIRSConfig.load_batch(base_dir)
 
-    for c in config_list : 
-        row = np.where(runlist['run_id'] == c.run_id)
+    workerfunc = ft.partial(do_ioveru_fom, gt_schema, gt_table)
 
-        fomdata[row] = do_ioveru_fom(c, gt_schema, gt_table)
+    if workers == 1 : 
+        fom = map(workerfunc, config_list)
+
+    else : 
+        mypool = mp.Pool(processes=workers) 
+        fom = mypool.map(workerfunc, config_list)
+
+    for i in len(config_list) : 
+        row = np.where(runlist['run_id'] == config_list[i].run_id)
+        fomdata[row] = fom[i]
  
     runlist['fom'] = pd.Series(fomdata, index=runlist.index)
     newname = 'new_{0}'.format(os.path.basename(run_datafile))
