@@ -458,7 +458,7 @@ class GeoFile375(GeoFile) :
     @classmethod
     def load(cls, filename) :
         target = cls()
-        GeoHdf = h5py.File(h5,"r")
+        GeoHdf = h5py.File(filename,"r")
         target.LatArray = GeoHdf['All_Data/VIIRS-IMG-GEO-TC_All/Latitude'][:]
         target.LonArray = GeoHdf['All_Data/VIIRS-IMG-GEO-TC_All/Longitude'][:]
         return target

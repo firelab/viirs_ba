@@ -3,7 +3,7 @@ Utility to dump out a shapefile of 375m Active Fire pixels.
 """
 
 import viirs_config as vc
-import viirs_threshold_reflCor_Bulk as vt
+import VIIRS_threshold_reflCor_Bulk as vt
 import osgeo.ogr as ogr
 import osgeo.osr as osr
 import os.path
@@ -13,7 +13,7 @@ def define_layer(data_source, layername, srs) :
     layer = data_source.CreateLayer(layername, srs, ogr.wkbPoint)
     
     field_timestamp = ogr.FieldDefn("Timestamp", ogr.OFTString)
-    field_timestamp.setWidth(19)
+    field_timestamp.SetWidth(19)
     layer.CreateField(field_timestamp)
     layer.CreateField(ogr.FieldDefn("Code", ogr.OFTInteger))
     
@@ -68,7 +68,7 @@ if __name__ == "__main__" :
     config = vc.VIIRSConfig.load(sys.argv[1])  
     
     if len(config.SortedImageDates) > 0 : 
-        shapefile, layer = None
+        shapefile = None
         for ImageDate in config.SortedImageDates : 
             # get the file names
             fileset = vt.FileSet.from_imagedate(ImageDate)
