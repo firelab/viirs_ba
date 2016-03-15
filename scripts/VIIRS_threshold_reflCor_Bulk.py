@@ -549,7 +549,7 @@ def run(config):
         print ImageDate + '\n'
         
         fileset = FileSet.from_imagedate(ImageDate)
-        files = fileset.get_file_names()
+        files = fileset.get_file_names(config.BaseDir)
 
         #Read band 7
         #h5 = glob.glob(os.path.join(config.BaseDir, "SVM07_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.h5"))[0]
