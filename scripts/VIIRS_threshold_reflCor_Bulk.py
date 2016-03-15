@@ -577,6 +577,7 @@ class ActiveFire375 (ActiveFire) :
         con = super(ActiveFire375, self).get_conditional()
         if threshold is not None : 
             self.recode_high_confidence(threshold, recode_val)                    
+        return con
 
 def run(config):
     
