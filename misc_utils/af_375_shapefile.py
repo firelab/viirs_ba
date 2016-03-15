@@ -16,27 +16,34 @@ def define_layer(data_source, layername, srs) :
     field_timestamp.SetWidth(19)
     layer.CreateField(field_timestamp)
     layer.CreateField(ogr.FieldDefn("Code", ogr.OFTInteger))
+    layer.CreateField(ogr.FieldDefn("Row_j", ogr.OFTInteger))
+    layer.CreateField(ogr.FieldDefn("Col_i", ogr.OFTInteger))
     
     return layer
 
 class FireShape (object) : 
-    def __init__(self, fire, geo) : 
+    def __init__(self, fire, geo, threshold=None, recode=None) : 
         self.fire = fire
         self.geo  = geo
         self.driver = ogr.GetDriverByName("ESRI Shapefile")
         self.wgs84  = osr.SpatialReference()
         self.wgs84.ImportFromEPSG(4326) #WGS84
+        self.threshold = threshold
+        self.recode    = recode
         
     def save_to_layer(self, layer,time=None) :
         """given a pre-existing layer, load it up with points from this 
         object's collection.""" 
-        con = self.fire.get_conditional()
+        con = self.fire.get_conditional(self.threshold, self.recode)
         geo_points = self.geo.make_list(con)
         vals = self.fire.AfArray[con]
+        row_j, col_i = self.fire.get_indices()
         
         for i in range(len(vals)) :
             feature = ogr.Feature(layer.GetLayerDefn())
             feature.SetField("Code", vals[i])
+            feature.SetField("Row_j", row_j[i])
+            feature.SetField("Col_i", col_i[i])
             
             if time is not None : 
                 feature.SetField("Timestamp", '{0:%Y-%m-%d %H:%M:%S}'.format(time))
@@ -64,11 +71,13 @@ class FireShape (object) :
         data_source.Destroy() 
 
 if __name__ == "__main__" :
-    if len(sys.argv) != 3 : 
-        print "Usage: {0} ini_file shapefile".format(sys.argv[0])
+    if len(sys.argv) != 5 : 
+        print "Usage: {0} ini_file threshold recode_val shapefile".format(sys.argv[0])
         print "The ini_file is only used for the ImageDates and BaseDir parameters."
         sys.exit()
     config = vc.VIIRSConfig.load(sys.argv[1])  
+    threshold = int(sys.argv[2])
+    recode_val = int(sys.argv[3])
     
     if len(config.SortedImageDates) > 0 : 
         shapefile = None
@@ -82,11 +91,11 @@ if __name__ == "__main__" :
             geo = vt.GeoFile375.load(file_names['GITCO_npp'])
             
             # combine fire data & geo data
-            fire_shape = FireShape(af, geo)
+            fire_shape = FireShape(af, geo, threshold, recode_val)
             
             # create shapefile first time around
             if shapefile is None : 
-                shapefile, layer=fire_shape.create_output_shapefile(sys.argv[2])
+                shapefile, layer=fire_shape.create_output_shapefile(sys.argv[4])
             
             # save this ImageDate's data to the file
             fire_shape.save_to_layer(layer, fileset.get_datetime())
