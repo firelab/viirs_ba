@@ -501,6 +501,13 @@ class ActiveFire(object) :
         
     def get_non_fire(self) : 
         return (self.AfArray == 5)
+        
+    def get_indices(self, con=None) : 
+        """retrieves a list of indices into the con array.
+        first list is row indices, second list is column. They are paired"""
+        if con is None:  
+            con = self.get_conditional()
+        return np.where(con == 1)
 
     def get_array_vals(self, conditional=None) : 
         """retrieves the array values specified by the conditional parameter"""
@@ -540,6 +547,36 @@ class ActiveFire375 (ActiveFire) :
         target.AfArray = target._AF375_fm[:]
         target.AfDateTime = h5_date_time(os.path.basename(filename))
         return target
+
+        
+    def count_high_confidence(self) : 
+        """counts the number of high confidence pixels by row"""
+        if not hasattr(self, "high_conf_row_sum") : 
+            high_conf = (self.AfArray == 9)
+            self.high_conf_row_sum = np.sum(high_conf, 1)
+        return self.high_conf_row_sum
+
+    def recode_high_confidence(self, threshold=50, recode_val=10) : 
+        """if there are more than 'threshold' high confidence pixels in a row,
+           recode them to recode_val"""
+           
+        row_sums = self.count_high_confidence()
+        rows = np.where(row_sums > threshold)
+        
+        # recode, one row at a time
+        for i_row in rows : 
+            cols = self.AfArray[i_row,:]
+            cols[np.where(cols == 9)] = recode_val
+            self.AfArray[i_row, :] = cols
+
+    def get_conditional(self, threshold=None, recode_val=10) :
+        """gets all the fire points, but also flags suspicious pixels with recode_val
+        Set "threshold" to the number of high confidence pixels in a single row
+        which is considered suspicious. If threshold is None, the recoding is 
+        skipped."""
+        con = super(ActiveFire375, self).get_conditional()
+        if threshold is not None : 
+            self.recode_high_confidence(threshold, recode_val)                    
 
 def run(config):
     
