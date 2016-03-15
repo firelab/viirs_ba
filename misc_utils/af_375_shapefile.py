@@ -27,7 +27,7 @@ class FireShape (object) :
         self.wgs84  = osr.SpatialReference()
         self.wgs84.ImportFromEPSG(4326) #WGS84
         
-    def save_to_layer(self, layer) :
+    def save_to_layer(self, layer,time=None) :
         """given a pre-existing layer, load it up with points from this 
         object's collection.""" 
         con = self.fire.get_conditional()
@@ -37,6 +37,9 @@ class FireShape (object) :
         for i in range(len(vals)) :
             feature = ogr.Feature(layer.GetLayerDefn())
             feature.SetField("Code", vals[i])
+            
+            if time is not None : 
+                feature.SetField("Timestamp", '{0:%Y-%m-%d %H:%M:%S}'.format(time))
             
             wkt = "POINT ({0} {1})".format(geo_points[i][1], geo_points[i][0])
             point = ogr.CreateGeometryFromWkt(wkt)
@@ -86,7 +89,7 @@ if __name__ == "__main__" :
                 shapefile, layer=fire_shape.create_output_shapefile(sys.argv[2])
             
             # save this ImageDate's data to the file
-            fire_shape.save_to_layer(layer)
+            fire_shape.save_to_layer(layer, fileset.get_datetime())
             
         #close shapefile
         shapefile.Destroy()
