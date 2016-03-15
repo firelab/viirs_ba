@@ -59,7 +59,6 @@
 
 import os
 import sys
-import shutil
 import datetime
 import glob
 import pipes
