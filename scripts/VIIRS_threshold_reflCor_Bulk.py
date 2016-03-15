@@ -158,8 +158,8 @@ def get_coords_from_Con_array(Con, Lat, Lon):
 def h5_date_time(f):
     dt = f.split("_")[2][1:9] + f.split("_")[3][1:7]
     dt = datetime.datetime.strptime(dt, '%Y%m%d%H%M%S')
-    print datetime.datetime.strftime(dt, '%Y%m%d%H%M%S')
-    print "\n"
+    #print datetime.datetime.strftime(dt, '%Y%m%d%H%M%S')
+    #print "\n"
     return dt
 
 def postgis_conn_params(config) : 
@@ -502,6 +502,13 @@ class ActiveFire(object) :
     def get_non_fire(self) : 
         return (self.AfArray == 5)
 
+    def get_array_vals(self, conditional=None) : 
+        """retrieves the array values specified by the conditional parameter"""
+	if conditional is None : 
+            conditional = self.get_conditional()
+
+        idx = np.where(conditional == 1)
+        return self.AfArray[idx]
     
     
 class ActiveFire750 (ActiveFire) : 

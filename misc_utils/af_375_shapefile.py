@@ -27,16 +27,24 @@ class FireShape (object) :
         self.wgs84  = osr.SpatialReference()
         self.wgs84.ImportFromEPSG(4326) #WGS84
         
-    def save_to_layer(self, layer) :
+    def save_to_layer(self, layer, config=None) :
         """given a pre-existing layer, load it up with points from this 
         object's collection.""" 
+
+        # find out which pixels have fire.
         con = self.fire.get_conditional()
+
+        # apply geographic window if necessary
+        if config is not None : 
+            self.geo.apply_window(con)
+
+        # get geo data and vals from af array
         geo_points = self.geo.make_list(con)
-        vals = self.fire.AfArray[con]
+        vals = self.fire.get_array_vals(con)
         
         for i in range(len(vals)) :
             feature = ogr.Feature(layer.GetLayerDefn())
-            feature.SetField("Code", vals[i])
+            feature.SetField("Code", int(vals[i]))
             
             wkt = "POINT ({0} {1})".format(geo_points[i][1], geo_points[i][0])
             point = ogr.CreateGeometryFromWkt(wkt)
