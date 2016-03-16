@@ -201,7 +201,7 @@ def push_list_to_postgis(config, list, date, table, pSize, band):
         query = "{0} {1};".format(preamble, ",".join(values))
         
         # Execute and commit the batch loading command.
-        conn.execute(query)
+        cur.execute(query)
         conn.commit()
         
     old_isolation_level = conn.isolation_level
@@ -517,6 +517,11 @@ class ActiveFire(object) :
                 ] = 1
         return self.conditional
         
+    def filter_conditional(self, con, val) : 
+        """sets con to false wherever AfArray == val."""
+        idx = np.where(self.AfArray == val)
+        con[idx] = 0 
+
     def get_non_fire(self) : 
         return (self.AfArray == 5)
         
@@ -768,10 +773,13 @@ def run(config):
             # #######################################################################
             
             #Set up Active Fire Conditional array: AfCon
-            AfCon = af_375.get_conditional()
+            #filter out rows having more than limit375 high confidence
+            #points
+            AfCon = af_375.get_conditional(threshold=config.limit375,recode_val=10)
+            af_375.filter_conditional(AfCon, 10)
             
             # Apply geographic window, if specified
-            geo_375.apply_window(AfCon)
+            geo_375.apply_window(config, AfCon)
                 
             # Get coordinates of all active fire pixels 
             Af375Out_list = geo_375.make_list(AfCon) 
