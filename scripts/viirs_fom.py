@@ -30,7 +30,7 @@ def project_fire_events_nlcd(config) :
     """Creates a new geometry column in the fire_events table and project to
     NLCD coordinates."""
     
-    query = "SELECT viirs_nlcd_fire_events('{0}', {1})".format(config.DBschema, vt.srids["NLCD"])
+    query = "SELECT viirs_nlcd_geom('{0}', 'fire_events', {1})".format(config.DBschema, vt.srids["NLCD"])
     vt.execute_query(config, query)
 
                             
