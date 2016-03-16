@@ -59,7 +59,6 @@
 
 import os
 import sys
-import shutil
 import datetime
 import glob
 import pipes
@@ -71,7 +70,7 @@ import gc
 import subprocess
 import viirs_config as vc
 from pyhdf.SD import SD, SDC
-from collections import namedtuple
+from itertools import islice, chain
 
 # Friendly names for relevant projections: 
 srids = { 
@@ -80,7 +79,15 @@ srids = {
   "NLCD"   : 96630
 }
 
-Point = namedtuple('Point', ['latitude','longitude'])
+# batch recipe from:
+# http://code.activestate.com/recipes/303279-getting-items-in-batches/
+# used for uploading points to postgis
+def batch(iterable, size):
+    sourceiter = iter(iterable)
+    while True:
+        batchiter = islice(sourceiter, size)
+        yield chain([batchiter.next()], batchiter)
+
 
 # Prints the contents of an h5.
 def print_name(name):
@@ -181,12 +188,22 @@ def push_list_to_postgis(config, list, date, table, pSize, band):
     conn = psycopg2.connect(ConnParam)
     # Open a cursor to perform database operations
     cur = conn.cursor()
-    #Loop through list
-    for i in list:
-        # Execute a command to insert new records into table
-        cur.execute("INSERT INTO \"%s\".%s (latitude, longitude, collection_date, geom, pixel_size, band_i_m) VALUES ('%s','%s','%s', ST_GeomFromText('POINT(%s %s)',4326),'%s','%s');"%(config.DBschema, table, i[0], i[1], datetime.datetime.strftime(date, format), i[1], i[0],pSize,band))
-        # Make the changes to the database persistent
+    
+    #batch up the list 100 items at a time
+    for batchiter in batch(list, 100) :
+        
+        # Construct a command to insert a batch of new records into table
+        preamble = "INSERT INTO \"%s\".%s (latitude, longitude, collection_date, geom, pixel_size, band_i_m) VALUES "%(config.DBschema, table)
+        values = [ ]
+        for i in batchiter : 
+            values.append("('%s','%s','%s', ST_GeomFromText('POINT(%s %s)',4326),'%s','%s')"%
+                 (i[0], i[1], datetime.datetime.strftime(date, format), i[1], i[0],pSize,band))
+        query = "{0} {1};".format(preamble, ",".join(values))
+        
+        # Execute and commit the batch loading command.
+        conn.execute(query)
         conn.commit()
+        
     old_isolation_level = conn.isolation_level
     conn.set_isolation_level(0)
     cur.execute("VACUUM ANALYZE \"%s\".%s;"%(config.DBschema, table)) 
@@ -195,6 +212,7 @@ def push_list_to_postgis(config, list, date, table, pSize, band):
     # Close communication with the database
     cur.close()
     conn.close()
+    
 def execute_query(config, queryText):
     print "Start", queryText, get_time()
     ConnParam = postgis_conn_params(config)
