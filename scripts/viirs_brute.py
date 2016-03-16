@@ -12,8 +12,8 @@ def create_params(template, cls=vc.SequentialVIIRSConfig) :
     By default, the resultant configuration objects are of the "SequentialVIIRSConfig"
     type, but a different class may be specified via the cls parameter."""
     # for the moment,we're only varying two parameters.
-    RthSub_range = np.arange(0.03, 0.08, 0.01) # 0.03 - 0.07 by 0.01: 5 steps
-    Rth_range    = np.arange(0.76, 0.85, 0.02) # 0.76-0.84 by 0.02: 5 steps
+    RthSub_range = np.arange(0.03, 0.06, 0.01) # 0.03 - 0.05 by 0.01: 3 steps
+    Rth_range    = np.arange(0.76, 0.81, 0.01) # 0.76-0.80 by 0.01: 5 steps
     
     template_vector = template.get_vector() 
     params = [] 
