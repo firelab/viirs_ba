@@ -13,6 +13,10 @@ $BODY$
     EXECUTE 'UPDATE ' || quote_ident(schema) || '.' ||
              quote_ident(tbl) || 
              ' SET geom_nlcd = ST_Transform(geom, $1)' USING srid ;
+
+    EXECUTE 'CREATE INDEX ' || quote_ident('idx_'||schema||'_'||tbl||'geom_nlcd') || 
+            ' ON ' || quote_ident(schema) || '.' || quote_ident(tbl) ||
+            ' USING GIST (geom_nlcd)' ;
     
     END
 $BODY$ 
