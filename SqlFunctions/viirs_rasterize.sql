@@ -1,4 +1,5 @@
-CREATE OR REPLACE FUNCTION viirs_rasterize_375(schema text, gt_schema text, gt_table text, distance float) 
+CREATE OR REPLACE FUNCTION viirs_rasterize_375(schema text, tbl text,
+                           gt_schema text, gt_table text, distance float) 
    RETURNS void AS
 $BODY$
     BEGIN
@@ -13,7 +14,7 @@ $BODY$
 		quote_literal('[rast1]') || ', ' || 
 		quote_literal('8BUI') || ', ' || 
 		quote_literal('SECOND') || ') rast_375 ' ||
-	  'FROM ' || quote_ident(schema) || '.fire_events a, ' || 
+	  'FROM ' || quote_ident(schema)||'.'||quote_ident(tbl)|| ' a, ' || 
 	       quote_ident(gt_schema) || '.' || quote_ident(gt_table) || ' b ' || 
 	  'WHERE ST_Intersects(geom_nlcd, rast) AND ' ||
 	        'ST_DWithin(a.geom_nlcd, b.geom, $1) AND ' ||
@@ -27,10 +28,12 @@ $BODY$
 $BODY$ 
   LANGUAGE plpgsql VOLATILE
   COST 100 ; 
-ALTER FUNCTION viirs_rasterize_375(schema text,gt_schema text, gt_table text, distance float)
+ALTER FUNCTION viirs_rasterize_375(schema text, tbl text, gt_schema text, 
+                          gt_table text, distance float)
   OWNER to postgres ;
 
-CREATE OR REPLACE FUNCTION viirs_rasterize_750(schema text, gt_schema text, gt_table text, distance float) 
+CREATE OR REPLACE FUNCTION viirs_rasterize_750(schema text, tbl text,
+                           gt_schema text, gt_table text, distance float) 
    RETURNS void AS
 $BODY$
     BEGIN
@@ -51,7 +54,7 @@ $BODY$
 		    quote_literal('[rast1]') || ', ' || 
 		    quote_literal('8BUI') || ', ' || 
 		    quote_literal('SECOND') || ') as rast_750 ' ||
-      'FROM ' || quote_ident(schema) || '.fire_events a, ' || 
+      'FROM ' || quote_ident(schema)||'.'||quote_ident(tbl)||' a, ' || 
            quote_ident(gt_schema) || '.' || quote_ident(gt_table) || ' b, ' ||
            '(SELECT rid, ' || 
 	           'St_SetSRID(ST_AddBand(ST_MakeEmptyRaster(ST_Width(rast)/2, ' ||
@@ -90,7 +93,8 @@ $BODY$
 $BODY$ 
   LANGUAGE plpgsql VOLATILE
   COST 100 ; 
-ALTER FUNCTION viirs_rasterize_750(schema text,gt_schema text, gt_table text, distance float)
+ALTER FUNCTION viirs_rasterize_750(schema text, tbl text, 
+               gt_schema text, gt_table text, distance float)
   OWNER to postgres ;
 
 CREATE OR REPLACE FUNCTION viirs_rasterize_merge(schema text) 

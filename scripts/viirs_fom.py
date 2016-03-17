@@ -44,18 +44,18 @@ def project_fire_events_nlcd(config) :
     query = "SELECT viirs_nlcd_geom('{0}', 'fire_events', {1})".format(config.DBschema, vt.srids["NLCD"])
     vt.execute_query(config, query)
 
-def create_fire_events_raster(config, gt_schema, gt_table) : 
+def create_fire_events_raster(config, tbl, gt_schema, gt_table) : 
     """dumps the ground truth fire mask to disk, overwrites by rasterizing fire_events, 
     reloads the table to postgis
     This ensures that the result is aligned to the specified ground truth 
     table."""
 
-    query = "SELECT viirs_rasterize_375('{0}', '{1}', '{2}', {3})".format(
-          config.DBschema, gt_schema, gt_table, config.SpatialProximity)
+    query = "SELECT viirs_rasterize_375('{0}', '{1}', '{2}', '{3}', {4})".format(
+          config.DBschema, tbl, gt_schema, gt_table, config.SpatialProximity)
     vt.execute_query(config, query)
 
-    query = "SELECT viirs_rasterize_750('{0}', '{1}', '{2}', {3})".format(
-          config.DBschema, gt_schema, gt_table, config.SpatialProximity)
+    query = "SELECT viirs_rasterize_750('{0}', '{1}', '{2}', '{3}', {4})".format(
+          config.DBschema, tbl, gt_schema, gt_table, config.SpatialProximity)
     vt.execute_query(config, query)
 
     query = "SELECT viirs_rasterize_merge('{0}')".format(config.DBschema)
@@ -101,7 +101,7 @@ def do_ioveru_fom(gt_schema, gt_table, config) :
     figure of merit."""
     
     project_fire_events_nlcd(config)
-    create_fire_events_raster(config, gt_schema, gt_table)
+    create_fire_events_raster(config, 'fire_events',  gt_schema, gt_table)
     mask_sum(config, gt_schema, gt_table)
     return calc_ioveru_fom(config)
 
@@ -112,17 +112,40 @@ def zonetbl_init(zone_schema, zone_tbl, config) :
     vt.execute_query(config, query)
 
 def zonetbl_run(zone_schema, zonedef_tbl, zone_tbl, zone_col, config) : 
+    """collects fire events raster points onto the zone results table for
+    a single run, optionally recalculating the fire events raster
+    zone_schema.zonedef_tbl  : names the zone definition table
+    zone_col                 : names the zone column in the def table
+    zone_schema.zone_tbl     : names the zone results table
+    gt_schema.gt_table       : names the ground truth raster (for alignment)
+    config                   : connection/run specific information
+    """
     run_schema = config.DBschema
-    
+
     query="SELECT viirs_zonetbl_run('{0}','{1}','{2}','{3}','{4}')".format(
         zone_schema, zone_tbl, zonedef_tbl, run_schema, zone_col)
     vt.execute_query(config, query)
 
-def do_one_zonetbl_run(gt_schema, zonedef_tbls, zone_tbls, zone_cols, config):
+def create_view_2013(config) : 
+    """creates a view of the fire_events table, only showing 2013 data."""
+    query="""CREATE OR REPLACE VIEW "{0}".fire_events_2013 AS
+          SELECT * FROM "{0}".fire_events
+          WHERE collection_date < '2014-01-01'
+          """.format(config.DBschema)
+
+    vt.execute_query(config, query)
+
+def do_one_zonetbl_run(gt_schema, gt_table, 
+                       zonedef_tbls, zone_tbls, zone_cols, config):
     """accumulates fire points from a single run into one or more zone tables.
     The zone definition table, results accumulation table, and column names
     are specified as parallel lists in zonedef_tbls, zone_tbls, zone_cols.
     """
+
+    # hard code to only 2013 data!
+    create_view_2013(config)
+    create_fire_events_raster(config, 'fire_events_2013', gt_schema, gt_table)
+        
     extract_fire_mask(config, config.DBschema, 'fire_events_raster',
                        geom_col='geom_nlcd')
     # try treating deftbls, tbls, and cols as parallel lists
@@ -166,7 +189,7 @@ def calc_all_ioveru_fom(run_datafile, gt_schema, gt_table, workers=1) :
     newname = 'new_{0}'.format(os.path.basename(run_datafile))
     runlist.to_csv(os.path.join(base_dir, newname))
 
-def do_all_zonetbl_runs(base_dir, gt_schema, workers=1) : 
+def do_all_zonetbl_runs(base_dir, gt_schema, gt_table, workers=1) : 
     """accumulates fire event raster points by polygon-defined zones.
     This function relies on the rasterized fire events tables created
     by the do_ioveru_fom() method. Make sure that these tables exist.
@@ -176,7 +199,7 @@ def do_all_zonetbl_runs(base_dir, gt_schema, workers=1) :
     # prepare the table to accumulate results
     zonetbl_init(gt_schema, 'eval_zone_counts', config_list[0])
 
-    workerfunc = ft.partial(do_one_zonetbl_run, gt_schema,
+    workerfunc = ft.partial(do_one_zonetbl_run, gt_schema, gt_table,
                       ('dissolve_eval_zones',),
                       ('eval_zone_counts',),
                       ('zone',))
