@@ -57,7 +57,9 @@ class VIIRSConfig (object) :
         merged.BaseDir       = template.BaseDir
         merged.use375af      = template.use375af
         merged.use750af      = template.use750af
-        merged.limit375      = template.limit375
+        
+        if hasattr(template, "limit375") :
+            merged.limit375      = template.limit375
         
         # merge in the vector data
         for p in vector_param_names : 
@@ -100,7 +102,10 @@ class VIIRSConfig (object) :
         
         target.use375af = ini.get("ActiveFire", "use375af")              # Flag to use M-band 750 m active fire data, AVAFO (y or n)  
         target.use750af = ini.get("ActiveFire", "use750af")              # Flag to use I-band 375 m active fire data, VF375 (y or n)
-        target.limit375 = ini.getint("ActiveFire", "limit375")           # How many highconf pixels in one row
+        try : 
+            target.limit375 = ini.getint("ActiveFire", "limit375")           # How many highconf pixels in one row
+        except : 
+            pass # don't care if it doesn't have it.
         
         target.M07UB = float(ini.get("Thresholds", "M07UB"))     #Band 07 (0.86 um)upper bound
         target.M08LB = float(ini.get("Thresholds", "M08LB"))     #Band 08 (1.24 um)lower bound
@@ -186,7 +191,8 @@ class VIIRSConfig (object) :
         ini.add_section("ActiveFire")
         ini.set("ActiveFire", "use375af",self.use375af.lower())              # Flag to use M-band 750 m active fire data, AVAFO (y or n)  
         ini.set("ActiveFire", "use750af",self.use750af.lower())              # Flag to use I-band 375 m active fire data, VF375 (y or n)
-        ini.set("ActiveFire", "limit375",'{:d}'.format(self.limit375))              # Flag to use I-band 375 m active fire data, VF375 (y or n)
+        if hasattr(self, "limit375") :
+            ini.set("ActiveFire", "limit375",'{:d}'.format(self.limit375))              # Flag to use I-band 375 m active fire data, VF375 (y or n)
 
         ini.add_section("Thresholds")
         ini.set("Thresholds", "M07UB", fltfmt.format(self.M07UB))     #Band 07 (0.86 um)upper bound

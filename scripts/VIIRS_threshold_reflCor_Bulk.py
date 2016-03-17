@@ -775,7 +775,9 @@ def run(config):
             #Set up Active Fire Conditional array: AfCon
             #filter out rows having more than limit375 high confidence
             #points
-            AfCon = af_375.get_conditional(threshold=config.limit375,recode_val=10)
+            AfCon = af_375.get_conditional(
+                        threshold=getattr(config, "limit375", None),
+                        recode_val=10)
             af_375.filter_conditional(AfCon, 10)
             
             # Apply geographic window, if specified
