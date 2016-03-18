@@ -331,6 +331,39 @@ def output_shape_files(config) :
     print command
     subprocess.call(command, shell = True)
 
+def ba_threshold(config, m07, m08, m10, m11, af, geo) :
+    """perform the thresholding and return a conditional array representing a mask of 
+    burned area detections."""
+    M07ReflArray = m07.get_cor_refl()
+    M08ReflArray = m08.get_cor_refl()
+    M10ReflArray = m10.get_cor_refl()
+    M11ReflArray = m11.get_cor_refl()
+ 
+    # Set up Burned Area Conditional array: BaCon
+    print "Thresholding"
+    BaCon = np.zeros_like(M07ReflArray, dtype=np.bool)
+        
+    # Threshold bands
+    # Cast any pixels as one that meet the thresholds.
+    # I'm getting a divide by zero warning here that I am catching with
+    # the "np.where" but I'm still getting it, however I'm pretty confident that
+    # the catch is working properly.
+    BaCon[
+        (M07ReflArray < config.M07UB) &
+        (M08ReflArray > config.M08LB) &
+        (M08ReflArray < config.M08UB) &
+        (M10ReflArray > config.M10LB) &
+        (M10ReflArray < config.M10UB) &
+        (M11ReflArray > config.M11LB) &
+        (np.where(M11ReflArray != 0,((M08ReflArray-config.RthSub)/M11ReflArray),config.RthLB-1) >= config.RthLB) &
+        (np.where(M11ReflArray != 0,((M08ReflArray-config.RthSub)/M11ReflArray),config.Rth+1) < config.Rth) &
+        (af.get_non_fire()) &
+        (geo.day_pixels(config.MaxSolZen)) &   #this should supress night pixels
+        m07.qa & m08.qa & m10.qa & m11.qa
+        ] = 1
+        
+    return BaCon
+
 
 class FileSet (object) : 
     """Represents a set of files containing satellite data from the same scene.
@@ -453,7 +486,7 @@ class VIIRSReflectanceFile (ReflectanceFile) :
         target = cls()
         hdf = h5py.File(filename, "r")
         target.ReflArray = hdf[cls.datasets[band]][:]
-        target.ReflFact = hdf[cls.cor_factor[band]][:]
+        target.ReflFact = hdf[cls.cor_factors[band]][:]
         target.corrected = False
         target._calc_qa_mask()
         return target
@@ -675,10 +708,6 @@ def run(config):
         m08 = VIIRSReflectanceFile.load(files['SVM08_npp'],'SVM08_npp')     
         m10 = VIIRSReflectanceFile.load(files['SVM10_npp'],'SVM10_npp')     
         m11 = VIIRSReflectanceFile.load(files['SVM11_npp'],'SVM11_npp')     
-        M07ReflArray = m07.get_cor_refl()
-        M08ReflArray = m08.get_cor_refl()
-        M10ReflArray = m10.get_cor_refl()
-        M11ReflArray = m11.get_cor_refl()
 
         # Read GMTCO
         geo_750 = GeoFile750.load(files['GMTCO_npp'])
@@ -691,55 +720,14 @@ def run(config):
             af_375 = ActiveFire375.load(files['VF375_npp'])
         
         # Read AVAFO
-        af_750 = ActiveFire750.load(files['AVAFO_npp'])
-            
+        af_750 = ActiveFire750.load(files['AVAFO_npp'])            
         
         # Set up Burned Area Conditional array: BaCon
-        print "Thresholding"
-        BaCon = np.zeros_like(M07ReflArray, dtype=np.bool)
-        
-        # Threshold bands
-        # Cast any pixels as one that meet the thresholds.
-        # I'm getting a divide by zero warning here that I am catching with
-        # the "np.where" but I'm still getting it, however I'm pretty confident that
-        # the catch is working properly.
-        BaCon[
-            (M07ReflArray < config.M07UB) &
-            (M08ReflArray > config.M08LB) &
-            (M08ReflArray < config.M08UB) &
-            (M10ReflArray > config.M10LB) &
-            (M10ReflArray < config.M10UB) &
-            (M11ReflArray > config.M11LB) &
-            (np.where(M11ReflArray != 0,((M08ReflArray-config.RthSub)/M11ReflArray),config.RthLB-1) >= config.RthLB) &
-            (np.where(M11ReflArray != 0,((M08ReflArray-config.RthSub)/M11ReflArray),config.Rth+1) < config.Rth) &
-            (af_750.get_non_fire()) &
-            (geo_750.day_pixels(config.MaxSolZen)) &   #this should supress night pixels
-            m07.qa & m08.qa & m10.qa & m11.qa
-            ] = 1
+        BaCon = ba_threshold(config, m07, m08, m10, m11, af_750, geo_750)
 
         # Apply geographic window, if specified
         geo_750.apply_window(config,BaCon)
-                
-    
-        # Clean up arrays
-        M07ReflArray = None
-        M08ReflArray = None
-        M10ReflArray = None
-        M11ReflArray = None
-        M07ReflFact = None
-        M08ReflFact = None
-        M10ReflFact = None
-        M11ReflFact = None
-        del M07ReflArray
-        del M08ReflArray
-        del M10ReflArray
-        del M11ReflArray
-        del M07ReflFact
-        del M08ReflFact
-        del M10ReflFact
-        del M11ReflFact
-            
-        
+                        
         # Get Burned area coordinates as an array
         BaOut_list = geo_750.make_list(BaCon)
         # Clean up arrays
