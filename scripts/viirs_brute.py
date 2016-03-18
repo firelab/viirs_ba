@@ -5,6 +5,73 @@ import numpy as np
 import multiprocessing as mp
 import pandas as pd
 
+
+def inc_idx( idx, maxval) :
+    """increments an index vector, where each element can have values 0..maxval-1
+    and the entire vector is treated like a counter"""
+    i=0
+    done = False
+    while not done : 
+        if i != 0 : 
+            idx[i-1]=0
+        idx[i] += 1
+        done = (idx[i]<maxval) or i==(len(idx)-1)
+        i += 1
+    if i == len(idx) and not idx[-1] < maxval : 
+        idx[-1]=0
+        
+
+def reflectance_deltas(template, delta, cls=vc.SequentialVIIRSConfig) :
+    """ 
+    given a reference configuration ("template") and a delta value (reflectance
+    units), this function generates all combinations of candidate configurations
+    separated from the reference by +/- the delta. 
+    
+    Only the raw reflectance thresholds are affected: 
+        * 'M07UB'
+        * 'M08LB'
+        * 'M08UB'
+        * 'M10LB'
+        * 'M10UB'
+        * 'M11LB'
+        
+    There are six affected parameters.
+    
+    We have a choice as to whether we allow any of the parameters to remain the 
+    same as the reference parameter set. 
+        * Can be the same as reference: (3**6) - 1 = 728 trials
+        * Cannot be the same as reference: (2**6) = 64 trials
+        
+    """
+    raw_refl_params = vc.float_vector_params[:6]
+    
+    ref_vector = template.get_vector()
+    ref_params = np.array([getattr(ref_vector,a) for a in raw_refl_params])
+    delta_mult = [-1, 1] # add 0 if you want to let parameters have orig. value.
+    config_list = [] 
+    dm_idx = np.zeros( (6,), dtype=np.int)
+    done = False
+    while not done : 
+        #calculate new value
+        p = ref_params + (np.array([delta_mult[i] for i in dm_idx])*delta)
+        
+        # set params on template
+        cur_params = {}
+        for i in range(len(raw_refl_params)) : 
+            cur_params[raw_refl_params[i]] = p[i]
+        i_vec = ref_vector._replace(**cur_params)
+            
+        # make a new config object
+        config_list.append( cls.merge_into_template(i_vec, template) )
+           
+        #increment index, check for done 
+        inc_idx(dm_idx, len(delta_mult))
+        done = np.all(dm_idx==0)
+    
+    return config_list
+    
+    
+
 def create_params(template, cls=vc.SequentialVIIRSConfig) : 
     """creates a list of configuration objects to be used while iterating 
     through the parameter space.
@@ -45,7 +112,7 @@ if __name__ == "__main__":
 
     # load in the template and create the plan of work
     template_ini = vc.VIIRSConfig.load(sys.argv[1])
-    p = create_params(template_ini)    
+    p = reflectance_deltas(template_ini, 0.02)    
     
     # save out the plan of work
     run_info_file = "{0}_schema_info.csv".format(template_ini.DBname)
