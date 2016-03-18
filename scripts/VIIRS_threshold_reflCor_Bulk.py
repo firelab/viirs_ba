@@ -420,7 +420,58 @@ class FileSet (object) :
             
         return self._filenames
         
-        
+class ReflectanceFile(object) : 
+    """A reflectance file contains calibrated data and correction factors to
+    express this data in terms of top of the atmosphere effective reflectance.
+    This is currently a placeholder for anything which might be found to be common 
+    between MODIS and VIIRS."""
+    pass 
+    
+class VIIRSReflectanceFile (ReflectanceFile) : 
+    """Handles the VIIRS-specific reflectance data"""
+    
+    datasets = {
+        "SVM07_npp" : 'All_Data/VIIRS-M7-SDR_All/Reflectance',
+        "SVM08_npp" : 'All_Data/VIIRS-M8-SDR_All/Reflectance',
+        "SVM10_npp" : 'All_Data/VIIRS-M10-SDR_All/Reflectance',
+        "SVM11_npp" : 'All_Data/VIIRS-M11-SDR_All/Reflectance',
+    }
+    
+    cor_factors = {
+        "SVM07_npp" : 'All_Data/VIIRS-M7-SDR_All/ReflectanceFactors',
+        "SVM08_npp" : 'All_Data/VIIRS-M8-SDR_All/ReflectanceFactors',
+        "SVM10_npp" : 'All_Data/VIIRS-M10-SDR_All/ReflectanceFactors',
+        "SVM11_npp" : 'All_Data/VIIRS-M11-SDR_All/ReflectanceFactors'
+    }
+                       
+
+    @classmethod
+    def load(cls, filename, band) : 
+        """loads data from filename and returns a new object.
+        User must specify the type of file (band name, used as keys in the 
+        class dictionaries "datasets" and "cor_factors"). """
+        target = cls()
+        hdf = h5py.File(filename, "r")
+        target.ReflArray = hdf[cls.datasets[band]][:]
+        target.ReflFact = hdf[cls.cor_factor[band]][:]
+        target.corrected = False
+        target._calc_qa_mask()
+        return target
+
+    def _calc_qa_mask(self) : 
+        """produces a mask of true values where data quality is good.
+        Must be performed on raw data (prior to calling get_cor_refl). Not intended
+        for end-user use, only for use by load().""" 
+        self.qa = (self.ReflArray < 65528)
+                
+    def get_cor_refl(self) : 
+        """calculates (if necessary) and returns the corrected reflectance.
+        Note this modifies the values in this object's ReflArray."""
+        if not self.corrected : 
+            self.ReflArray = self.ReflArray*self.ReflFact[0]  + self.ReflFact[1]
+            self.corrected = True
+        return self.ReflArray
+     
 
 
 class GeoFile(object) :
@@ -619,33 +670,15 @@ def run(config):
         fileset = FileSet.from_imagedate(ImageDate)
         files = fileset.get_file_names(config.BaseDir)
 
-        #Read band 7
-        #h5 = glob.glob(os.path.join(config.BaseDir, "SVM07_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.h5"))[0]
-        print "Reading band 07: ", os.path.basename(files['SVM07_npp'])        
-        M07Hdf = h5py.File(files['SVM07_npp'], "r")
-        M07ReflArray = M07Hdf['All_Data/VIIRS-M7-SDR_All/Reflectance'][:]
-        M07ReflFact = M07Hdf['All_Data/VIIRS-M7-SDR_All/ReflectanceFactors'][:]
-
-        # Read band 8
-        #h5 = glob.glob(os.path.join(config.BaseDir, "SVM08_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.h5"))[0]
-        print "Reading band 08:", os.path.basename(files['SVM08_npp'])
-        M08Hdf = h5py.File(files['SVM08_npp'], "r")
-        M08ReflArray = M08Hdf['All_Data/VIIRS-M8-SDR_All/Reflectance'][:]
-        M08ReflFact = M08Hdf['All_Data/VIIRS-M8-SDR_All/ReflectanceFactors'][:]
-
-        # Read band 10
-        #h5 = glob.glob(os.path.join(config.BaseDir, "SVM10_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.h5"))[0]
-        print "Reading band 10:", os.path.basename(files['SVM10_npp'])
-        M10Hdf = h5py.File(files['SVM10_npp'], "r")
-        M10ReflArray = M10Hdf['All_Data/VIIRS-M10-SDR_All/Reflectance'][:]
-        M10ReflFact = M10Hdf['All_Data/VIIRS-M10-SDR_All/ReflectanceFactors'][:]
-
-        # Read band 11
-        #h5 = glob.glob(os.path.join(config.BaseDir, "SVM11_npp_" + ImageDate + "_e???????_b00001_c????????????????????_all-_dev.h5"))[0]
-        print "Reading band 11:", os.path.basename(files['SVM11_npp'])
-        M11Hdf = h5py.File(files['SVM11_npp'], "r")
-        M11ReflArray = M11Hdf['All_Data/VIIRS-M11-SDR_All/Reflectance'][:]
-        M11ReflFact = M11Hdf['All_Data/VIIRS-M11-SDR_All/ReflectanceFactors'][:]
+        # load the reflectance data from the hdf files
+        m07 = VIIRSReflectanceFile.load(files['SVM07_npp'],'SVM07_npp')     
+        m08 = VIIRSReflectanceFile.load(files['SVM08_npp'],'SVM08_npp')     
+        m10 = VIIRSReflectanceFile.load(files['SVM10_npp'],'SVM10_npp')     
+        m11 = VIIRSReflectanceFile.load(files['SVM11_npp'],'SVM11_npp')     
+        M07ReflArray = m07.get_cor_refl()
+        M08ReflArray = m08.get_cor_refl()
+        M10ReflArray = m10.get_cor_refl()
+        M11ReflArray = m11.get_cor_refl()
 
         # Read GMTCO
         geo_750 = GeoFile750.load(files['GMTCO_npp'])
@@ -660,15 +693,10 @@ def run(config):
         # Read AVAFO
         af_750 = ActiveFire750.load(files['AVAFO_npp'])
             
-        # Correct reflectance values by applying scale factors
-        M07ReflArray = M07ReflArray*M07ReflFact[0] + M07ReflFact[1]
-        M08ReflArray = M08ReflArray*M08ReflFact[0] + M08ReflFact[1]
-        M10ReflArray = M10ReflArray*M10ReflFact[0] + M10ReflFact[1]
-        M11ReflArray = M11ReflArray*M11ReflFact[0] + M11ReflFact[1]
         
         # Set up Burned Area Conditional array: BaCon
         print "Thresholding"
-        BaCon = np.zeros_like(M07ReflArray)
+        BaCon = np.zeros_like(M07ReflArray, dtype=np.bool)
         
         # Threshold bands
         # Cast any pixels as one that meet the thresholds.
@@ -686,10 +714,7 @@ def run(config):
             (np.where(M11ReflArray != 0,((M08ReflArray-config.RthSub)/M11ReflArray),config.Rth+1) < config.Rth) &
             (af_750.get_non_fire()) &
             (geo_750.day_pixels(config.MaxSolZen)) &   #this should supress night pixels
-            ((M07ReflArray - M07ReflFact[1])/M07ReflFact[0] < 65528) &
-            ((M08ReflArray - M08ReflFact[1])/M08ReflFact[0] < 65528) &
-            ((M10ReflArray - M10ReflFact[1])/M10ReflFact[0] < 65528) &
-            ((M11ReflArray - M11ReflFact[1])/M11ReflFact[0] < 65528)
+            m07.qa & m08.qa & m10.qa & m11.qa
             ] = 1
 
         # Apply geographic window, if specified
