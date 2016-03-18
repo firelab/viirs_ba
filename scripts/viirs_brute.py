@@ -32,28 +32,30 @@ def reflectance_deltas(template, delta, cls=vc.SequentialVIIRSConfig) :
         * 'M08LB'
         * 'M08UB'
         * 'M10LB'
-        * 'M10UB'
         * 'M11LB'
         
-    There are six affected parameters.
+    There are five affected parameters. We are not going to alter M10UB since it
+    is set to 1, and therefore was essentially removed from play.
     
     We have a choice as to whether we allow any of the parameters to remain the 
     same as the reference parameter set. 
-        * Can be the same as reference: (3**6) - 1 = 728 trials
-        * Cannot be the same as reference: (2**6) = 64 trials
+        * Can be the same as reference: (3**5) - 1 = 242 trials
+        * Cannot be the same as reference: (2**5) = 32 trials
         
     """
     raw_refl_params = vc.float_vector_params[:6]
+    del raw_refl_params[raw_refl_params.index('M10UB')]
     
     ref_vector = template.get_vector()
     ref_params = np.array([getattr(ref_vector,a) for a in raw_refl_params])
     delta_mult = [-1, 1] # add 0 if you want to let parameters have orig. value.
     config_list = [] 
-    dm_idx = np.zeros( (6,), dtype=np.int)
+    dm_idx = np.zeros( (len(raw_refl_params),), dtype=np.int)
     done = False
     while not done : 
         #calculate new value
         p = ref_params + (np.array([delta_mult[i] for i in dm_idx])*delta)
+        print p
         
         # set params on template
         cur_params = {}
