@@ -48,14 +48,13 @@ def reflectance_deltas(template, delta, cls=vc.SequentialVIIRSConfig) :
     
     ref_vector = template.get_vector()
     ref_params = np.array([getattr(ref_vector,a) for a in raw_refl_params])
-    delta_mult = [-1, 1] # add 0 if you want to let parameters have orig. value.
+    delta_mult = [-1, 0, 1] # add 0 if you want to let parameters have orig. value.
     config_list = [] 
     dm_idx = np.zeros( (len(raw_refl_params),), dtype=np.int)
     done = False
     while not done : 
         #calculate new value
         p = ref_params + (np.array([delta_mult[i] for i in dm_idx])*delta)
-        print p
         
         # set params on template
         cur_params = {}
