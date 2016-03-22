@@ -170,7 +170,7 @@ def calc_all_ioveru_fom(run_datafile, gt_schema, gt_table, workers=1) :
 
     # prep ground truth table, giving each row a multipoint
     # geometry of the centroids of "true" pixels in the mask
-    extract_fire_mask(config, gt_schema, gt_table)
+    extract_fire_mask(config_list[0], gt_schema, gt_table)
 
     workerfunc = ft.partial(do_ioveru_fom, gt_schema, gt_table)
 
