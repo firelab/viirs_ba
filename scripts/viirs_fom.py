@@ -214,6 +214,10 @@ def do_all_zonetbl_runs(base_dir, gt_schema, gt_table,
     # prepare the table to accumulate results
     zonetbl_init(gt_schema, zone_tbl, zone_col, config_list[0])
 
+    # prep ground truth table, giving each row a multipoint
+    # geometry of the centroids of "true" pixels in the mask
+    extract_fire_mask(config_list[0], gt_schema, gt_table)
+
     workerfunc = ft.partial(do_one_zonetbl_run, gt_schema, gt_table,
                       (zonedef_tbl,),
                       (zone_tbl,),
