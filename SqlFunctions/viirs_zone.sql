@@ -1,4 +1,5 @@
-CREATE OR REPLACE FUNCTION viirs_zonetbl_init(schema text, tbl text, srid int)
+CREATE OR REPLACE FUNCTION viirs_zonetbl_init(schema text, tbl text, col text,
+     srid int)
    RETURNS void AS
 $BODY$
     BEGIN
@@ -9,14 +10,15 @@ $BODY$
     EXECUTE 'CREATE TABLE ' || 
            quote_ident(schema) || '.' || quote_ident(tbl) || 
            ' (geom geometry(Multipoint, ' ||
-            srid::text ||'), zone int, run_id text, ' ||
+            srid::text || '), ' || 
+           quote_ident(col) || ' int, run_id text, ' ||
            'cells375 int, area_km real)' ; 
            
     END
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100 ;
-ALTER FUNCTION viirs_zonetbl_init(schema text, tbl text, srid int)
+ALTER FUNCTION viirs_zonetbl_init(schema text, tbl text, col text, srid int)
   OWNER to postgres ;
 
 -- viirs_zonetbl_run() aggregates rasterized fire_events from a 
@@ -41,7 +43,7 @@ $BODY$
     -- Carve out only the points which intersect the reference polygons
     EXECUTE 'CREATE TEMPORARY TABLE intersections ON COMMIT DROP AS ' ||
             'SELECT ST_Multi(ST_Intersection(a.geom,b.geom_nlcd)) as geom, '||
-                   'a.zone ' ||
+                   'a.' || quote_ident(zone_col)  || ' ' ||
             'FROM ' || quote_ident(zone_schema)||'.'||quote_ident(zonedef_tbl)||' a,'||
                     quote_ident(run_schema)||'.fire_events_raster b ' || 
             'WHERE ST_Intersects(a.geom, b.geom_nlcd)' ; 
@@ -50,7 +52,7 @@ $BODY$
     -- into the master table.
     EXECUTE 'INSERT INTO ' || 
             quote_ident(zone_schema) ||'.'|| quote_ident(zone_tbl) || 
-            ' (geom, zone, run_id, cells375, area_km) '  ||
+            ' (geom, '||quote_ident(zone_col)||', run_id, cells375, area_km) '||
             'SELECT ST_Multi(ST_Collect(f.geom)), ' || 
                    'f.zone, ' || quote_literal(run_schema) || ', ' ||
                    'SUM(ST_NPoints(f.geom)), ' ||
@@ -58,7 +60,7 @@ $BODY$
             'FROM (SELECT ' || quote_ident(zone_col) ||
                     ' as zone, (ST_Dump(geom)).geom as geom ' ||
                    'FROM intersections) as f ' || 
-            'GROUP BY ' || quote_ident(zone_col) ;
+            'GROUP BY f.zone' ;
 
     END
 $BODY$

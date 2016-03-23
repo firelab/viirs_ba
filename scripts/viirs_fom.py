@@ -105,10 +105,10 @@ def do_ioveru_fom(gt_schema, gt_table, config) :
     mask_sum(config, gt_schema, gt_table)
     return calc_ioveru_fom(config)
 
-def zonetbl_init(zone_schema, zone_tbl, config) : 
+def zonetbl_init(zone_schema, zone_tbl, zone_col, config) : 
     """drops and re-creates the table in which results are accumulated"""
-    query = "SELECT viirs_zonetbl_init('{0}', '{1}', {2})".format(
-           zone_schema, zone_tbl, vt.srids['NLCD'])
+    query = "SELECT viirs_zonetbl_init('{0}', '{1}', '{2}', {3})".format(
+           zone_schema, zone_tbl, zone_col, vt.srids['NLCD'])
     vt.execute_query(config, query)
 
 def zonetbl_run(zone_schema, zonedef_tbl, zone_tbl, zone_col, config) : 
@@ -126,31 +126,40 @@ def zonetbl_run(zone_schema, zonedef_tbl, zone_tbl, zone_col, config) :
         zone_schema, zone_tbl, zonedef_tbl, run_schema, zone_col)
     vt.execute_query(config, query)
 
-def create_view_2013(config) : 
+def create_events_view(config,year) : 
     """creates a view of the fire_events table, only showing 2013 data."""
-    query="""CREATE OR REPLACE VIEW "{0}".fire_events_2013 AS
+    view_name = 'fire_events_{0}'.format(year)
+    query="""CREATE OR REPLACE VIEW "{0}".{1} AS
           SELECT * FROM "{0}".fire_events
-          WHERE collection_date < '2014-01-01'
-          """.format(config.DBschema)
+          WHERE collection_date BETWEEN '{2}-01-01' AND '{3}-01-01'
+          """.format(config.DBschema, view_name,year,year+1)
 
     vt.execute_query(config, query)
+    return view_name
 
 def do_one_zonetbl_run(gt_schema, gt_table, 
-                       zonedef_tbls, zone_tbls, zone_cols, config):
+                       zonedef_tbls, zone_tbls, zone_cols, config,
+                       rasterize=True, year=2013):
     """accumulates fire points from a single run into one or more zone tables.
     The zone definition table, results accumulation table, and column names
     are specified as parallel lists in zonedef_tbls, zone_tbls, zone_cols.
     """
 
-    # hard code to only 2013 data!
-    create_view_2013(config)
-    create_fire_events_raster(config, 'fire_events_2013', gt_schema, gt_table)
+    # re-rasterize only if necessary
+    if rasterize : 
+        view_name = create_events_view(config, year)
+        create_fire_events_raster(config, view_name,
+                                   gt_schema, gt_table)
         
-    extract_fire_mask(config, config.DBschema, 'fire_events_raster',
+        # fire_events raster is always the product of the above, no matter
+        # which year is selected.
+        extract_fire_mask(config, config.DBschema, 'fire_events_raster',
                        geom_col='geom_nlcd')
+
     # try treating deftbls, tbls, and cols as parallel lists
     for deftbl,tbl,col in zip(zonedef_tbls,zone_tbls,zone_cols) : 
         zonetbl_run(gt_schema, deftbl, tbl, col, config)
+    
     
 def calc_all_ioveru_fom(run_datafile, gt_schema, gt_table, workers=1) : 
     """calculates the i over u figure of merit for a batch of previously
@@ -189,20 +198,27 @@ def calc_all_ioveru_fom(run_datafile, gt_schema, gt_table, workers=1) :
     newname = 'new_{0}'.format(os.path.basename(run_datafile))
     runlist.to_csv(os.path.join(base_dir, newname))
 
-def do_all_zonetbl_runs(base_dir, gt_schema, gt_table, workers=1) : 
+def do_all_zonetbl_runs(base_dir, gt_schema, gt_table, 
+                       zonedef_tbl='dissolve_eval_zones',
+                       zone_tbl='eval_zone_counts', 
+                       zone_col='zone',
+                       rasterize=True, 
+                       year=2013, 
+                       workers=1) : 
     """accumulates fire event raster points by polygon-defined zones.
-    This function relies on the rasterized fire events tables created
-    by the do_ioveru_fom() method. Make sure that these tables exist.
+    This function can optionally use the rasterized fire events tables 
+    created by the do_ioveru_fom() method. Make sure that these tables exist.
     """
     config_list = vc.VIIRSConfig.load_batch(base_dir)
 
     # prepare the table to accumulate results
-    zonetbl_init(gt_schema, 'eval_zone_counts', config_list[0])
+    zonetbl_init(gt_schema, zone_tbl, zone_col, config_list[0])
 
     workerfunc = ft.partial(do_one_zonetbl_run, gt_schema, gt_table,
-                      ('dissolve_eval_zones',),
-                      ('eval_zone_counts',),
-                      ('zone',))
+                      (zonedef_tbl,),
+                      (zone_tbl,),
+                      (zone_col,),
+                      rasterize=rasterize, year=year)
 
     if workers == 1 : 
         map(workerfunc, config_list)
