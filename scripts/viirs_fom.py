@@ -142,6 +142,30 @@ def create_events_view(config,year) :
     vt.execute_query(config, query)
     return view_name
 
+def find_missing_zonetbl_runs(gt_schema, zone_tbl, config) : 
+    """locates missing run_ids in the zone_tbl by comparing with the list of schemas"""
+    query = """select b.runs from
+      (select nspname runs from pg_namespace where nspname LIKE 'Run_%') b
+      where b.runs not in (select distinct run_id from "{0}"."{1}")""".format(
+                gt_schema, zone_tbl)
+
+    # now, need to execute a query that returns multiple results.
+    ConnParam = vt.postgis_conn_params(config)
+    conn = psycopg2.connect(ConnParam)
+    # Open a cursor to perform database operations
+    cur = conn.cursor()
+    cur.execute(query)
+    rows = cur.fetchall()
+
+    conn.commit()
+    # Close communication with the database
+    cur.close()
+    conn.close()
+
+    runs = [ i[0] for i in rows ] 
+
+    return runs
+
 def do_one_zonetbl_run(gt_schema, gt_table, 
                        zonedef_tbls, zone_tbls, zone_cols, config,
                        rasterize=True, year=2013):
@@ -210,15 +234,22 @@ def do_all_zonetbl_runs(base_dir, gt_schema, gt_table,
                        zone_col='zone',
                        rasterize=True, 
                        year=2013, 
-                       workers=1) : 
+                       workers=1, only_missing=False) : 
     """accumulates fire event raster points by polygon-defined zones.
     This function can optionally use the rasterized fire events tables 
-    created by the do_ioveru_fom() method. Make sure that these tables exist.
+    created by the do_ioveru_fom() method. It can also recover from an
+    interrupted run by only processing the missing runs.
     """
     config_list = vc.VIIRSConfig.load_batch(base_dir)
 
-    # prepare the table to accumulate results
-    zonetbl_init(gt_schema, zone_tbl, zone_col, config_list[0])
+    if only_missing : 
+        runs = find_missing_zonetbl_runs(gt_schema, zone_tbl, config_list[0])
+        run_configs = [ cfg for cfg in config_list if cfg.DBschema in runs]
+        config_list = run_configs
+
+    else : 
+        # prepare the table to accumulate results
+        zonetbl_init(gt_schema, zone_tbl, zone_col, config_list[0])
 
     workerfunc = ft.partial(do_one_zonetbl_run, gt_schema, gt_table,
                       (zonedef_tbl,),
@@ -231,3 +262,4 @@ def do_all_zonetbl_runs(base_dir, gt_schema, gt_table,
     else:  
         mypool = mp.Pool(processes=workers)
         mypool.map(workerfunc,config_list)
+
