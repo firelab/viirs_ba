@@ -44,18 +44,23 @@ def project_fire_events_nlcd(config) :
     query = "SELECT viirs_nlcd_geom('{0}', 'fire_events', {1})".format(config.DBschema, vt.srids["NLCD"])
     vt.execute_query(config, query)
 
-def create_fire_events_raster(config, tbl, gt_schema, gt_table) : 
+def create_fire_events_raster(config, tbl, gt_schema, gt_table, spatial_filter=True) : 
     """dumps the ground truth fire mask to disk, overwrites by rasterizing fire_events, 
     reloads the table to postgis
     This ensures that the result is aligned to the specified ground truth 
     table."""
 
+    if spatial_filter : 
+        filt_dist = config.SpatialProximity
+    else : 
+        filt_dist = -1.
+        
     query = "SELECT viirs_rasterize_375('{0}', '{1}', '{2}', '{3}', {4})".format(
-          config.DBschema, tbl, gt_schema, gt_table, config.SpatialProximity)
+          config.DBschema, tbl, gt_schema, gt_table, filt_dist)
     vt.execute_query(config, query)
 
     query = "SELECT viirs_rasterize_750('{0}', '{1}', '{2}', '{3}', {4})".format(
-          config.DBschema, tbl, gt_schema, gt_table, config.SpatialProximity)
+          config.DBschema, tbl, gt_schema, gt_table, filt_dist)
     vt.execute_query(config, query)
 
     query = "SELECT viirs_rasterize_merge('{0}')".format(config.DBschema)
@@ -149,7 +154,8 @@ def do_one_zonetbl_run(gt_schema, gt_table,
     if rasterize : 
         view_name = create_events_view(config, year)
         create_fire_events_raster(config, view_name,
-                                   gt_schema, gt_table)
+                                   gt_schema, gt_table, 
+                                   spatial_filter=False)
         
         # fire_events raster is always the product of the above, no matter
         # which year is selected.

@@ -2,22 +2,30 @@ CREATE OR REPLACE FUNCTION viirs_rasterize_375(schema text, tbl text,
                            gt_schema text, gt_table text, distance float) 
    RETURNS void AS
 $BODY$
+    DECLARE 
+       dist_clause text ; 
     BEGIN
 
-	EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(schema) || '.fire_events_raster' ; 
+	EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(schema) || '.fire_events_raster' ;
+	
+	IF distance <> -1 THEN 
+	  dist_clause := 'ST_DWithin(a.geom_nlcd, b.geom, $1) AND ';
+	ELSE
+	  dist_clause := ' ' ;
+	END IF ; 
 
-	EXECUTE 'CREATE TABLE ' || quote_ident(schema) || '.fire_events_raster AS ' ||
-	  'SELECT rid, ' ||
+        EXECUTE 'CREATE TABLE ' || quote_ident(schema) || '.fire_events_raster AS ' ||
+          'SELECT rid, ' ||
 	     'ST_MapAlgebra(' ||
-		'ST_Union(ST_AsRaster(geom_nlcd, rast, ' || quote_literal('8BUI') ||')), '
+	        'ST_Union(ST_AsRaster(geom_nlcd, rast, ' || quote_literal('8BUI') ||')), '
 		'ST_AddBand(ST_MakeEmptyRaster(rast), ' || quote_literal('8BUI') || '::text), ' ||
 		quote_literal('[rast1]') || ', ' || 
 		quote_literal('8BUI') || ', ' || 
 		quote_literal('SECOND') || ') rast_375 ' ||
 	  'FROM ' || quote_ident(schema)||'.'||quote_ident(tbl)|| ' a, ' || 
-	       quote_ident(gt_schema) || '.' || quote_ident(gt_table) || ' b ' || 
+	        quote_ident(gt_schema) || '.' || quote_ident(gt_table) || ' b ' || 
 	  'WHERE ST_Intersects(geom_nlcd, rast) AND ' ||
-	        'ST_DWithin(a.geom_nlcd, b.geom, $1) AND ' ||
+	        dist_clause ||
 	        'pixel_size = 375 ' ||  
 	  'GROUP BY rid, rast' USING distance;  
 
@@ -36,6 +44,8 @@ CREATE OR REPLACE FUNCTION viirs_rasterize_750(schema text, tbl text,
                            gt_schema text, gt_table text, distance float) 
    RETURNS void AS
 $BODY$
+    DECLARE 
+        dist_clause text ; 
     BEGIN
 
 	EXECUTE 'ALTER TABLE ' || quote_ident(schema) || '.fire_events_raster ' ||
@@ -46,6 +56,12 @@ $BODY$
 
     DISCARD TEMP ;
     CREATE TEMPORARY TABLE newrasters (rid integer, rast_750 raster) ; 
+    
+    IF distance <> -1 THEN 
+        dist_clause := 'ST_DWithin(a.geom_nlcd, b.geom, $1) AND ';
+    ELSE
+        dist_clause := ' ' ;
+    END IF ; 
 
     EXECUTE  'INSERT INTO newrasters ' || 
       'SELECT b.rid, ST_MapAlgebra(' ||
@@ -64,7 +80,7 @@ $BODY$
 		             quote_literal('8BUI')||'::text), ST_SRID(rast)) as rast ' ||
             'FROM ' || quote_ident(gt_schema)||'.'||quote_ident(gt_table)||') empty_rast_750 ' ||
       'WHERE ST_Intersects(geom_nlcd, b.rast) AND ' ||
-	            'ST_DWithin(a.geom_nlcd, b.geom, $1) AND ' ||
+	            dist_clause ||
 	            'b.rid = empty_rast_750.rid AND ' ||
 	            'pixel_size = 750  ' ||
       'GROUP BY b.rid, empty_rast_750.rast ' USING distance;
