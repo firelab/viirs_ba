@@ -170,7 +170,7 @@ def find_missing_zonetbl_runs(gt_schema, zone_tbl, config) :
 
 def do_one_zonetbl_run(gt_schema, gt_table, 
                        zonedef_tbl, zone_tbl, zone_col, config,
-                       year=2013):
+                       year=2013, spatial_filter=False):
     """accumulates fire points from a single run into one or more zone tables.
     The zone definition table, results accumulation table, and column names
     are specified as parallel lists in zonedef_tbls, zone_tbls, zone_cols.
@@ -179,7 +179,7 @@ def do_one_zonetbl_run(gt_schema, gt_table,
     view_name = create_events_view(config, year)
     create_fire_events_raster(config, view_name,
                                 gt_schema, gt_table, zone_tbl,
-                                spatial_filter=False)
+                                spatial_filter=spatial_filter)
     
     # fire_events raster is always the product of the above, no matter
     # which year is selected.
@@ -231,7 +231,8 @@ def do_all_zonetbl_runs(base_dir, gt_schema, gt_table,
                        zone_tbl='eval_zone_counts', 
                        zone_col='zone',
                        year=2013, 
-                       workers=1, only_missing=False) : 
+                       workers=1, only_missing=False,
+                       spatial_filter=False) : 
     """accumulates fire event raster points by polygon-defined zones.
     This function can optionally use the rasterized fire events tables 
     created by the do_ioveru_fom() method. It can also recover from an
@@ -252,7 +253,8 @@ def do_all_zonetbl_runs(base_dir, gt_schema, gt_table,
                       zonedef_tbl,
                       zone_tbl,
                       zone_col,
-                      year=year)
+                      year=year,
+                      spatial_filter=spatial_filter)
 
     if workers == 1 : 
         map(workerfunc, config_list)
