@@ -46,17 +46,12 @@ def project_fire_events_nlcd(config) :
 
 def create_fire_events_raster(config, tbl, 
                               gt_schema, rast_table, geom_table, 
-                              spatial_filter=True) : 
+                              filt_dist=-1) : 
     """dumps the ground truth fire mask to disk, overwrites by rasterizing fire_events, 
     reloads the table to postgis
     This ensures that the result is aligned to the specified ground truth 
     table."""
 
-    if spatial_filter : 
-        filt_dist = config.SpatialProximity
-    else : 
-        filt_dist = -1.
-        
     query = "SELECT viirs_rasterize_375('{0}', '{1}', '{2}', '{3}', '{4}', {5})".format(
           config.DBschema, tbl, gt_schema, rast_table, geom_table, filt_dist)
     vt.execute_query(config, query)
@@ -108,7 +103,9 @@ def do_ioveru_fom(gt_schema, gt_table, config) :
     figure of merit."""
     
     project_fire_events_nlcd(config)
-    create_fire_events_raster(config, 'fire_events',  gt_schema, gt_table, gt_table)
+    create_fire_events_raster(config, 'fire_events',  
+                              gt_schema, gt_table, gt_table,
+                              filt_dist=config.SpatialProximity)
     mask_sum(config, gt_schema, gt_table)
     return calc_ioveru_fom(config)
 
@@ -174,12 +171,20 @@ def do_one_zonetbl_run(gt_schema, gt_table,
     """accumulates fire points from a single run into one or more zone tables.
     The zone definition table, results accumulation table, and column names
     are specified as parallel lists in zonedef_tbls, zone_tbls, zone_cols.
+    There are two primary cases where this is run. Either no filtering is 
+    desired, or we want to include only those points which are within
+    the provided, pre-buffered polygons.
     """
+
+    if spatial_filter : 
+        filt_dist = 0. 
+    else: 
+        filt_dist = -1.
 
     view_name = create_events_view(config, year)
     create_fire_events_raster(config, view_name,
-                                gt_schema, gt_table, zone_tbl,
-                                spatial_filter=spatial_filter)
+                                gt_schema, gt_table, zonedef_tbl,
+                                filt_dist=filt_dist)
     
     # fire_events raster is always the product of the above, no matter
     # which year is selected.
