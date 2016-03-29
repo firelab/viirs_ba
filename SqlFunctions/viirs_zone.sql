@@ -100,19 +100,28 @@ $BODY$
     -- Each row in the raster table is an entire 100x100 raster tile,
     -- need to bust out each individual point.
     EXECUTE 'CREATE TEMPORARY TABLE rast_points ON COMMIT DROP AS ' ||
-      'SELECT nextval('rast_pt_seq') gid, rid, ' || 
+      'SELECT nextval('||quote_literal('rast_pt_seq')||') gid, rid, ' || 
          '(ST_DumpPoints(geom_nlcd)).geom as geom ' || 
       'FROM ' || quote_ident(run_schema)||'.fire_events_raster' ;
 
     CREATE INDEX rast_points_idx ON rast_points USING GIST (geom) ;
 
     -- For each "True" pixel in the raster mask, locate one and only one
-    -- fire with which it is to be associated.
+    -- fire with which it is to be associated. Use the two-stage
+    -- hybrid query suggested on the PostGIS <-> operator doc page,
+    -- first to get the nearest 10 zones based on centroid distance,
+    -- then to compute the actual distance based on boundary and get
+    -- the single nearest zone.
     EXECUTE 'CREATE TEMPORARY TABLE fire_assignment ON COMMIT DROP AS ' ||
       'SELECT a.gid, ' || 
-         '(SELECT b.fireid FROM ' ||
-            quote_ident(zone_schema) ||'.'||'quote_ident(zonedef_tbl)||' b '||
-          'ORDER BY a.geom <#> b.geom LIMIT 1) closest_zone ' ||
+         '(WITH index_query AS (' ||
+           'SELECT b.'||quote_ident(zone_col)||
+               ', ST_Distance(a.geom,b.geom) d ' ||
+           'FROM ' ||
+            quote_ident(zone_schema) ||'.'||quote_ident(zonedef_tbl)||' b '||
+           'ORDER BY a.geom <-> b.geom LIMIT 10) '||
+         'SELECT '||quote_ident(zone_col)||' FROM index_query ' ||
+         'ORDER BY d LIMIT 1) closest_zone ' ||
       'FROM rast_points a';
       
     -- Group the intersecting points by zone and insert
