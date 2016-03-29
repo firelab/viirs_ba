@@ -115,7 +115,7 @@ def zonetbl_init(zone_schema, zone_tbl, zone_col, config) :
            zone_schema, zone_tbl, zone_col, vt.srids['NLCD'])
     vt.execute_query(config, query)
 
-def zonetbl_run(zone_schema, zonedef_tbl, zone_tbl, zone_col, config) : 
+def zonetbl_run(zone_schema, zonedef_tbl, zone_tbl, zone_col, config,nearest=False) : 
     """collects fire events raster points onto the zone results table for
     a single run, optionally recalculating the fire events raster
     zone_schema.zonedef_tbl  : names the zone definition table
@@ -123,11 +123,21 @@ def zonetbl_run(zone_schema, zonedef_tbl, zone_tbl, zone_col, config) :
     zone_schema.zone_tbl     : names the zone results table
     gt_schema.gt_table       : names the ground truth raster (for alignment)
     config                   : connection/run specific information
+    
+    This function will call one of two stored procedures in the database: 
+        * viirs_zonetbl_run; or 
+        * viirs_nearest_zonetbl_run
+    depending on the value of 'nearest'.
     """
     run_schema = config.DBschema
+    
+    if nearest : 
+        function_name = 'viirs_nearest_zonetbl_run'
+    else : 
+        function_name = 'viirs_zonetbl_run'
 
-    query="SELECT viirs_zonetbl_run('{0}','{1}','{2}','{3}','{4}')".format(
-        zone_schema, zone_tbl, zonedef_tbl, run_schema, zone_col)
+    query="SELECT {5}('{0}','{1}','{2}','{3}','{4}')".format(
+        zone_schema, zone_tbl, zonedef_tbl, run_schema, zone_col, function_name)
     vt.execute_query(config, query)
 
 def create_events_view(config,year) : 
@@ -172,14 +182,16 @@ def do_one_zonetbl_run(gt_schema, gt_table,
     The zone definition table, results accumulation table, and column names
     are specified as parallel lists in zonedef_tbls, zone_tbls, zone_cols.
     There are two primary cases where this is run. Either no filtering is 
-    desired, or we want to include only those points which are within
-    the provided, pre-buffered polygons.
+    desired, or we want to include only those points which are within one 
+    SpatialProximity of the provided polygons.
     """
 
     if spatial_filter : 
-        filt_dist = 0. 
+        filt_dist = config.SpatialProximity 
+        nearest = True
     else: 
         filt_dist = -1.
+        nearest = False
 
     view_name = create_events_view(config, year)
     create_fire_events_raster(config, view_name,
@@ -191,7 +203,7 @@ def do_one_zonetbl_run(gt_schema, gt_table,
     extract_fire_mask(config, config.DBschema, 'fire_events_raster',
                     geom_col='geom_nlcd')
 
-    zonetbl_run(gt_schema, zonedef_tbl, zone_tbl, zone_col, config)
+    zonetbl_run(gt_schema, zonedef_tbl, zone_tbl, zone_col, config, nearest)
     
     
 def calc_all_ioveru_fom(run_datafile, gt_schema, gt_table, workers=1) : 
