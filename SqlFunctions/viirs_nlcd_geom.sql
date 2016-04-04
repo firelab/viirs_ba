@@ -5,7 +5,7 @@ $BODY$
 
     EXECUTE 'ALTER TABLE ' || quote_ident(schema) || '.' ||
               quote_ident(tbl) || 
-              ' DROP COLUMN IF EXISTS geom_nlcd' ;
+              ' DROP COLUMN IF EXISTS geom_nlcd CASCADE' ;
     EXECUTE 'ALTER TABLE ' || quote_ident(schema) || '.' || 
               quote_ident(tbl) || 
               ' ADD COLUMN geom_nlcd geometry' ;
