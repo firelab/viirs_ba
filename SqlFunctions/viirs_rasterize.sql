@@ -44,10 +44,10 @@ $BODY$
 	END IF ; 
 
         EXECUTE 'CREATE TABLE ' || quote_ident(schema) || '.fire_events_raster AS ' ||
-          'SELECT rid, ' ||
+          'SELECT b.rid, ' ||
 	     'ST_MapAlgebra(' ||
-	        'ST_Union(ST_AsRaster(geom_nlcd, rast, ' || quote_literal('8BUI') ||')), '
-		'ST_AddBand(ST_MakeEmptyRaster(rast), ' || quote_literal('8BUI') || '::text), ' ||
+	        'ST_Union(ST_AsRaster(geom_nlcd, b.rast, ' || quote_literal('8BUI') ||')), '
+		'ST_AddBand(ST_MakeEmptyRaster(b.rast), ' || quote_literal('8BUI') || '::text), ' ||
 		quote_literal('[rast1]') || ', ' || 
 		quote_literal('8BUI') || ', ' || 
 		quote_literal('SECOND') || ') rast_375 ' ||
@@ -58,7 +58,7 @@ $BODY$
 	        'ST_Intersects(c.geom, b.rast) AND ' ||
 	        dist_clause ||
 	        'pixel_size = 375 ' ||  
-	  'GROUP BY rid, rast' USING distance;  
+	  'GROUP BY b.rid, b.rast' USING distance;  
 
 	EXECUTE 'UPDATE ' || quote_ident(schema) || '.fire_events_raster ' ||
 	    'SET rast_375 = ST_SetBandNoDataValue(rast_375, 3.)' ;
