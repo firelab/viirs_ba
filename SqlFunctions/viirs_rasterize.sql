@@ -36,7 +36,8 @@ $BODY$
 	EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(schema) || '.fire_events_raster' ;
 	
 	IF distance <> -1 THEN 
-	  dist_clause := 'ST_DWithin(a.geom_nlcd, c.geom, $1) AND ';
+	  dist_clause := 'ST_DWithin(a.geom_nlcd, c.geom, $1) AND ' ||
+	                 'ST_Intersects(c.geom, b.rast) AND ' ;
           filter_tbl := ', '||quote_ident(gt_schema)||'.'||quote_ident(geom_table)||' c ' ;
 	ELSE
 	  dist_clause := ' ' ;
@@ -55,7 +56,6 @@ $BODY$
 	        quote_ident(gt_schema) || '.' || quote_ident(rast_table) || ' b ' || 
 	        filter_tbl || 
 	  'WHERE ST_Intersects(a.geom_nlcd, b.rast) AND ' ||
-	        'ST_Intersects(c.geom, b.rast) AND ' ||
 	        dist_clause ||
 	        'pixel_size = 375 ' ||  
 	  'GROUP BY b.rid, b.rast' USING distance;  
@@ -93,7 +93,8 @@ $BODY$
     CREATE TEMPORARY TABLE newrasters (rid integer, rast_750 raster) ; 
     
     IF distance <> -1 THEN 
-        dist_clause := 'ST_DWithin(a.geom_nlcd, c.geom, $1) AND ';
+        dist_clause := 'ST_DWithin(a.geom_nlcd, c.geom, $1) AND ' ||
+                       'ST_Intersects(c.geom, b.rast) AND ' ;
         filter_tbl := quote_ident(gt_schema)||'.'||quote_ident(geom_table)||' c, ' ;
     ELSE
         dist_clause := ' ' ;
@@ -118,7 +119,6 @@ $BODY$
 		             quote_literal('8BUI')||'::text), ST_SRID(rast)) as rast ' ||
             'FROM ' || quote_ident(gt_schema)||'.'||quote_ident(rast_table)||') empty_rast_750 ' ||
       'WHERE ST_Intersects(a.geom_nlcd, b.rast) AND ' ||
-                    'ST_Intersects(c.geom, b.rast) AND ' || 
 	            dist_clause ||
 	            'b.rid = empty_rast_750.rid AND ' ||
 	            'pixel_size = 750  ' ||
