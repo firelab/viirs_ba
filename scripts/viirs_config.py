@@ -254,7 +254,7 @@ class VIIRSConfig (object) :
 
         if self.has_window() : 
             ini.add_section("GeogWindow")
-            fmtfmt = '{}'
+            fltfmt = '{}'
             ini.set("GeogWindow", "North", fltfmt.format(self.north)) 
             ini.set("GeogWindow", "South", fltfmt.format(self.south)) 
             ini.set("GeogWindow", "East", fltfmt.format(self.east)) 
