@@ -33,7 +33,7 @@ ConfigVector = namedtuple('ConfigVector', vector_param_names )
                   
 class VIIRSConfig (object) : 
     @classmethod
-    def merge_into_template(cls, thresh_vec, template) : 
+    def merge_into_template(cls, thresh_vec, template, runid=None) : 
         """creates a new VIIRSConfig object with thresh_vec grafted into the template
         
         Values in the resultant object may be "perturbed" in order to 
@@ -73,7 +73,10 @@ class VIIRSConfig (object) :
             merged.west  = template.west
 
         # handle changes
-        merged.run_id      = cls.create_run_id(merged)
+        if runid is not None : 
+            merged.run_id = runid
+        else : 
+            merged.run_id      = cls.create_run_id(merged)
         merged.ShapePath = merged.perturb_dir(template.ShapePath)
         merged.perturb_schema() 
         merged.sort_dates()

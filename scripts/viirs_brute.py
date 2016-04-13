@@ -38,8 +38,7 @@ def csv_vectors(template, table, params=vc.vector_param_names,cls=vc.VIIRSConfig
         for p in params : 
             newvals[p] = row[p]
         i_vec = ref_vector._replace(**newvals)
-        i_cfg = cls.merge_into_template(i_vec, template)
-        i_cfg.run_id = int(row["run_id"])
+        i_cfg = cls.merge_into_template(i_vec, template, runid=int(row["run_id"]))
         config_list.append(i_cfg)
 
     return config_list
