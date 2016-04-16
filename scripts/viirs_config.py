@@ -233,9 +233,9 @@ class VIIRSConfig (object) :
 
         ini.add_section("ConfirmBurnParameters")
         ini.set("ConfirmBurnParameters", "TemporalProximity", 
-                   '{:d}'.format(self.TemporalProximity))
+                   '{:d}'.format(int(self.TemporalProximity)))
         ini.set("ConfirmBurnParameters", "SpatialProximity", 
-                   '{:d}'.format(self.SpatialProximity))
+                   '{:d}'.format(int(self.SpatialProximity)))
 
         ini.add_section("OutputFlags")
         ini.set("OutputFlags", "TextFile", self.TextOut.lower())

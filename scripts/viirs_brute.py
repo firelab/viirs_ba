@@ -36,7 +36,10 @@ def csv_vectors(template, table, params=vc.vector_param_names,cls=vc.VIIRSConfig
         row = table.loc[i_row, :]
         newvals = {} 
         for p in params : 
-            newvals[p] = row[p]
+            if p in int_vector_params : 
+                newvals[p] = int(row[p])
+            else : 
+                newvals[p] = row[p]
         i_vec = ref_vector._replace(**newvals)
         i_cfg = cls.merge_into_template(i_vec, template, runid=int(row["run_id"]))
         config_list.append(i_cfg)
