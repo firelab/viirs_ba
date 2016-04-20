@@ -206,7 +206,8 @@ def do_one_zonetbl_run(gt_schema, gt_table,
     zonetbl_run(gt_schema, zonedef_tbl, zone_tbl, zone_col, config, nearest)
     
     
-def calc_all_ioveru_fom(run_datafile, gt_schema, gt_table, workers=1) : 
+def calc_all_ioveru_fom(run_datafile, gt_schema, gt_table, workers=1,
+                    filepat='*.ini') : 
     """calculates the i over u figure of merit for a batch of previously
     completed runs.
     User supplies the path name of a previously written CSV file which 
@@ -220,7 +221,7 @@ def calc_all_ioveru_fom(run_datafile, gt_schema, gt_table, workers=1) :
 
     runlist = pd.read_csv(run_datafile, index_col=0) 
     fomdata = np.zeros_like(runlist['run_id'],dtype=np.float)
-    config_list = vc.VIIRSConfig.load_batch(base_dir)
+    config_list = vc.VIIRSConfig.load_batch(base_dir,filepat)
 
     # prep ground truth table, giving each row a multipoint
     # geometry of the centroids of "true" pixels in the mask

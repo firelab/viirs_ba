@@ -85,10 +85,10 @@ class VIIRSConfig (object) :
         return merged
 
     @classmethod
-    def load_batch(cls, base_dir) : 
+    def load_batch(cls, base_dir,filepat='*.ini') : 
         """explores all subdirectories of base_dir for ini_files, loads
         them, and returns them as a list."""
-        ini_files = glob.glob('{0}/*/*.ini'.format(base_dir))
+        ini_files = glob.glob('{0}/*/{1}'.format(base_dir,filepat))
         config_list = [cls.load(i) for i in ini_files ]
         return config_list
 
