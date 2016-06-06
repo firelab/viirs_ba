@@ -201,10 +201,10 @@ CREATE OR REPLACE FUNCTION viirs_rasterize_filter(
 $BODY$
    BEGIN
    
-   EXECUTE 'ALTER TABLE ' || quote_ident(schema) || '.fire_events_raster ' ||
+   EXECUTE 'ALTER TABLE ' || quote_ident(rast_schema) || '.fire_events_raster ' ||
           'DROP COLUMN IF EXISTS rast'  ;
 
-   EXECUTE 'ALTER TABLE ' || quote_ident(schema) || '.fire_events_raster ' || 
+   EXECUTE 'ALTER TABLE ' || quote_ident(rast_schema) || '.fire_events_raster ' || 
           'ADD COLUMN rast raster' ;
           
    EXECUTE 'WITH mask AS (' || 
