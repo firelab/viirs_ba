@@ -60,7 +60,7 @@ def create_fire_events_raster(config, tbl,
           config.DBschema, tbl, gt_schema, rast_table, geom_table, filt_dist)
     vt.execute_query(config, query)
 
-    query = "SELECT viirs_rasterize_merge('{0}')".format(config.DBschema)
+    query = "SELECT viirs_rasterize_merge('{0}', 'rast')".format(config.DBschema)
     vt.execute_query(config, query)
     
 def mask_sum(config, gt_schema, gt_table) : 
