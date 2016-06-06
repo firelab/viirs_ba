@@ -33,7 +33,7 @@ def csv_vectors(template, table, params=vc.vector_param_names,cls=vc.VIIRSConfig
 
     # loop over all the rows in the table
     for i_row in range(nrows) : 
-        row = table.loc[i_row, :]
+        row = table.iloc[i_row, :]
         newvals = {} 
         for p in params : 
             if p in vc.int_vector_params : 
