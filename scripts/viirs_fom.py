@@ -46,7 +46,8 @@ def project_fire_events_nlcd(config) :
 
 def create_fire_events_raster(config, tbl, 
                               gt_schema, rast_table, geom_table, 
-                              filt_dist=-1) : 
+                              filt_dist=-1,
+                              filter_table=None) : 
     """dumps the ground truth fire mask to disk, overwrites by rasterizing fire_events, 
     reloads the table to postgis
     This ensures that the result is aligned to the specified ground truth 
@@ -59,9 +60,19 @@ def create_fire_events_raster(config, tbl,
     query = "SELECT viirs_rasterize_750('{0}', '{1}', '{2}', '{3}', '{4}', {5})".format(
           config.DBschema, tbl, gt_schema, rast_table, geom_table, filt_dist)
     vt.execute_query(config, query)
-
-    query = "SELECT viirs_rasterize_merge('{0}', 'rast')".format(config.DBschema)
-    vt.execute_query(config, query)
+    
+    if filter_table is None  : 
+        query = "SELECT viirs_rasterize_merge('{0}', 'rast')".format(config.DBschema)
+        vt.execute_query(config, query)
+    else : 
+        query = "SELECT viirs_rasterize_merge('{0}', 'merged_rast')".format(config.DBschema)
+        vt.execute_query(config, query)
+        
+        query = "SELECT viirs_rasterize_filter('{0}','merged_rast','{1}','{2}')".format(
+              config.DBschema, gt_schema, filter_table)
+        vt.execute_query(config, query)
+              
+        
     
 def mask_sum(config, gt_schema, gt_table) : 
     """adds the mask values from the fire_events_raster to the values in the ground truth raster.
