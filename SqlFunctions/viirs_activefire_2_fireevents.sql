@@ -6,7 +6,10 @@ CREATE OR REPLACE FUNCTION viirs_activefire_2_fireevents(
     varchar(200),
     timestamp without time zone,
     interval,
-    integer)
+    integer,
+    text,
+    text,
+    text)
   RETURNS void AS
 $BODY$
 DECLARE
@@ -14,6 +17,9 @@ DECLARE
   collection timestamp without time zone := $2; 
   recent interval := $3;
   distance integer := $4; 
+  landcover_schema := $5;
+  no_burn_table := 6 ; 
+  no_burn_geom := 7 ; 
 --   a_row active_fire%rowtype;
   a_row RECORD;
   ret RECORD;
@@ -27,6 +33,7 @@ DECLARE
   create_new_collection text ; 
   insert_first_point text  ;
   loop_query text ;
+  no_burn_res int ; 
   
 BEGIN
   -- selects currently active collections, to which the fire point should belong.
@@ -64,13 +71,19 @@ BEGIN
       quote_literal('ActiveFire') || 
       ', $4, $5, $6, $7)';    
 
+  -- determine resolution of "no-burn" mask
+  EXECUTE 'SELECT scale_x/2 FROM raster_columns WHERE r_table_schema = ' || 
+      landcover_schema || ' AND r_table_name = ' || no_burn_table || 
+      ' AND r_raster_column = ' || quote_literal('rast') INTO no_burn_res ;
 
   -- apply the "no-burn" mask here
   -- loops over all candidate active fire pixels from the specified collection.
-  loop_query := 'SELECT a.* FROM ' || quote_ident(schema) || '.active_fire a ' || 
-      'WHERE collection_date = $1' ;
+  loop_query := 'SELECT a.* FROM ' || quote_ident(schema) || '.active_fire a, ' || 
+         quote_ident(landcover_schema) || '.' || quote_ident(no_burn_table) || ' b '
+      'WHERE collection_date = $1 AND '
+      '(NOT ST_DWithin(ST_Transform(a.geom, 96630), b.' || quote_ident(no_burn_geom) || ', $2))';
 
-  FOR a_row IN EXECUTE loop_query USING collection
+  FOR a_row IN EXECUTE loop_query USING collection, no_burn_res
   LOOP
   EXECUTE select_collection INTO dumrec USING collection, recent, distance, a_row.geom ;
   IF dumrec IS NOT NULL THEN 
