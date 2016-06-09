@@ -29,14 +29,14 @@ DECLARE
   loop_query text ;
   
 BEGIN
+  -- selects currently active collections, to which the fire point should belong.
   select_collection := 'SELECT * from (SELECT fe.fid as fe_fid, ' || 
                        'fe.geom, fc.fid as fc_fid ' || 
                    'FROM ' || quote_ident(schema) || '.fire_events fe, ' || 
                               quote_ident(schema) || '.fire_collections fc ' || 
                    'WHERE fe.collection_id = fc.fid ' ||
                      'AND fc.last_update >= $1 - $2 ' || 
-                     'AND fc.last_update <= $1 ' || 
-                     'AND fc.active = TRUE) as tf ' ||  
+                     'AND fc.last_update <= $1) as tf ' ||  
     'WHERE ST_DWithin(ST_Transform($4, 102008), tf.geom, $3) LIMIT 1' ;
     
   append_point_to_collection := 'INSERT INTO ' || quote_ident(schema) || '.fire_events ' ||
@@ -65,6 +65,8 @@ BEGIN
       ', $4, $5, $6, $7)';    
 
 
+  -- apply the "no-burn" mask here
+  -- loops over all candidate active fire pixels from the specified collection.
   loop_query := 'SELECT a.* FROM ' || quote_ident(schema) || '.active_fire a ' || 
       'WHERE collection_date = $1' ;
 
