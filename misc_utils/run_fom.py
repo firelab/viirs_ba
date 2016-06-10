@@ -15,11 +15,12 @@ def all_fom(database_name, workers=12) :
                            zone_tbl='fixed_zone_counts', 
                            workers=workers,
                            mask_tbl='bobafet13')
+
     # 2013 events
     vf.do_all_zonetbl_runs('.','gt','burnmask13',
                            zonedef_tbl='calevents_2013',
                            zone_tbl='fixed_events_2013_counts',
-                           zone_col='fire_id',
+                           zone_col='fireid',
                            year=2013,
                            workers=workers,
                            spatial_filter=True,
@@ -28,7 +29,7 @@ def all_fom(database_name, workers=12) :
     vf.do_all_zonetbl_runs('.','gt','burnmask14',
                            zonedef_tbl='calevents_2014',
                            zone_tbl='fixed_events_2014_counts',
-                           zone_col='fire_id',
+                           zone_col='fireid',
                            year=2014,
                            workers=workers,
                            spatial_filter=True,
