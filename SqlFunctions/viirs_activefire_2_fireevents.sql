@@ -82,22 +82,22 @@ BEGIN
   -- select out the points to work with and compare against mask
   EXECUTE 'CREATE TEMPORARY TABLE current_active_fire AS (' ||
       'SELECT * FROM ' || quote_ident(schema) || '.active_fire ' || 
-      'WHERE collection_date = $1' USING collection ;
+      'WHERE collection_date = $1)' USING collection ;
       
   ALTER TABLE current_active_fire ADD COLUMN masked boolean DEFAULT False ; 
   EXECUTE 'SELECT ST_SRID(rast) FROM ' || 
-     quote_ident(landcover_schema)||'.'||quote_ident(no_burn_table)||' nb' || 
+     quote_ident(landcover_schema)||'.'||quote_ident(no_burn_table)||' nb ' || 
      'LIMIT 1' INTO dumint ; 
   
   EXECUTE 'UPDATE current_active_fire ' ||
       'SET masked = TRUE ' ||
       'FROM '||quote_ident(landcover_schema)||'.'||quote_ident(no_burn_table)||' nb ' ||
-      'WHERE ST_Translate(current_active_fire.geom, $1) && nb.rast AND ' ||
-        'ST_DWithin(ST_Translate(current_active_fire.geom, $1), nb.geom, $2)'
+      'WHERE ST_Transform(current_active_fire.geom, $1) && nb.rast AND ' ||
+        'ST_DWithin(ST_Transform(current_active_fire.geom, $1), nb.geom, $2)'
     USING dumint, no_burn_res ; 
       
   -- loops over all candidate active fire pixels from the specified collection.
-  loop_query := 'SELECT a.* FROM current_active_fire WHERE NOT masked' ; 
+  loop_query := 'SELECT a.* FROM current_active_fire a WHERE NOT masked' ; 
 
   FOR a_row IN EXECUTE loop_query 
   LOOP
