@@ -17,9 +17,9 @@ DECLARE
   collection timestamp without time zone := $2; 
   recent interval := $3;
   distance integer := $4; 
-  landcover_schema := $5;
-  no_burn_table := 6 ; 
-  no_burn_geom := 7 ; 
+  landcover_schema text := $5;
+  no_burn_table text := $6 ; 
+  no_burn_geom text := $7 ; 
 --   a_row active_fire%rowtype;
   a_row RECORD;
   ret RECORD;
@@ -33,7 +33,7 @@ DECLARE
   create_new_collection text ; 
   insert_first_point text  ;
   loop_query text ;
-  no_burn_res int ; 
+  no_burn_res real ; 
   
 BEGIN
   -- selects currently active collections, to which the fire point should belong.
@@ -73,7 +73,8 @@ BEGIN
 
   -- determine resolution of "no-burn" mask
   EXECUTE 'SELECT scale_x/2 FROM raster_columns WHERE r_table_schema = ' || 
-      landcover_schema || ' AND r_table_name = ' || no_burn_table || 
+      quote_literal(landcover_schema) || 
+      ' AND r_table_name = ' || quote_literal(no_burn_table) || 
       ' AND r_raster_column = ' || quote_literal('rast') INTO no_burn_res ;
 
   -- apply the "no-burn" mask here
@@ -81,7 +82,7 @@ BEGIN
   loop_query := 'SELECT a.* FROM ' || quote_ident(schema) || '.active_fire a, ' || 
          quote_ident(landcover_schema) || '.' || quote_ident(no_burn_table) || ' b '
       'WHERE collection_date = $1 AND '
-      '(NOT ST_DWithin(ST_Transform(a.geom, 96630), b.' || quote_ident(no_burn_geom) || ', $2))';
+      '(NOT ST_DWithin(a.geom_nlcd, b.' || quote_ident(no_burn_geom) || ', $2))';
 
   FOR a_row IN EXECUTE loop_query USING collection, no_burn_res
   LOOP

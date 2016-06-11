@@ -53,8 +53,8 @@ BEGIN
              'ST_DWithin(ST_Transform(t.geom, 102008), fe.geom, $3) AND ' || 
              
              -- mask out nonburnable
-             '(NOT ST_DWithin(ST_Transform(t.geom, 96630), mask.'
-                  ||quote_ident(no_burn_geom)|| ', $4) ' ||
+             '(NOT ST_DWithin(t.geom_nlcd, mask.'
+                  ||quote_ident(no_burn_geom)|| ', $4)) ' ||
 
         'GROUP BY t.fid) confirmed ' ||
      'WHERE fe.fid = fe_fid AND ' ||
@@ -80,7 +80,8 @@ BEGIN
 
   -- determine resolution of "no-burn" mask
   EXECUTE 'SELECT scale_x/2 FROM raster_columns WHERE r_table_schema = ' || 
-      landcover_schema || ' AND r_table_name = ' || no_burn_table || 
+     quote_literal(landcover_schema) || 
+     ' AND r_table_name = ' || quote_literal(no_burn_table) || 
       ' AND r_raster_column = ' || quote_literal('rast') INTO no_burn_res ;
 
   EXECUTE 'CREATE TEMPORARY TABLE confirmed_pts AS ' || confirm_query
