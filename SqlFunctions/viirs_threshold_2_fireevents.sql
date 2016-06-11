@@ -53,7 +53,8 @@ BEGIN
              'ST_DWithin(ST_Transform(t.geom, 102008), fe.geom, $3) AND ' || 
              
              -- mask out nonburnable
-             '(NOT ST_DWithin(t.geom_nlcd, mask.'
+             '(ST_Transform(t.geom, 96630) && mask.rast AND ' ||
+               'NOT ST_DWithin(ST_Transform(t.geom, 96630), mask.'
                   ||quote_ident(no_burn_geom)|| ', $4)) ' ||
 
         'GROUP BY t.fid) confirmed ' ||

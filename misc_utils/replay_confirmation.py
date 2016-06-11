@@ -35,11 +35,6 @@ def confirm_date(config, datestring) :
 def reconfirm_run(config) : 
     """re-computes fire_events and fire_collections table for entire run"""
     delete_confirmed(config)
-    query = "SELECT viirs_nlcd_geom('{}', 'active_fire', {})".format(config.DBschema,vt.srids['NLCD'])
-    vt.execute_query(config, query)
-
-    query = "SELECT viirs_nlcd_geom('{}', 'threshold_burned', {})".format(config.DBschema,vt.srids['NLCD'])
-    vt.execute_query(config, query)
     for d in config.SortedImageDates : 
         confirm_date(config, d)
 
