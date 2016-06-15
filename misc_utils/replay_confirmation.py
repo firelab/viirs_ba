@@ -10,6 +10,11 @@ def delete_confirmed(config) :
     vt.execute_query(config, 'DELETE FROM "{0}".fire_events'.format(config.DBschema))
     vt.execute_query(config, 'DELETE FROM "{0}".fire_collections'.format(config.DBschema))
 
+def mask_points(config) : 
+    """apply landcover mask to active_fire and threshold burned"""
+    vt.execute_query(config, "SELECT viirs_mask_points('{0}','active_fire','landcover','noburn','geom')")
+    vt.execute_query(config, "SELECT viirs_mask_points('{0}','threshold_burned','landcover','noburn','geom')")
+    
 # Convert to a datetime object
 def image_date_time(imagedate):
     # pattern: 
@@ -35,6 +40,7 @@ def confirm_date(config, datestring) :
 def reconfirm_run(config) : 
     """re-computes fire_events and fire_collections table for entire run"""
     delete_confirmed(config)
+    mask_points(config)
     for d in config.SortedImageDates : 
         confirm_date(config, d)
 

@@ -248,12 +248,12 @@ def execute_check_4_activity(config, collectionDate):
  
 def execute_active_fire_2_events(config, collectionDate):
     print "Start active_fire to fire_events", get_time()
-    query_text = "SELECT VIIRS_activefire_2_fireevents('{0}', '{1}', '{2}', {3}, 'landmask', 'noburn', 'geom');".format(config.DBschema, collectionDate, config.get_sql_interval(), int(config.SpatialProximity))
+    query_text = "SELECT VIIRS_activefire_2_fireevents('{0}', '{1}', '{2}', {3});".format(config.DBschema, collectionDate, config.get_sql_interval(), int(config.SpatialProximity))
     execute_query(config,query_text)
 
 def execute_threshold_2_events(config, collectionDate):
     print "Start VIIRS_threshold_2_fireevents", get_time()
-    query_text = "SELECT VIIRS_threshold_2_fireevents('{0}', '{1}', '{2}', {3}, 'landmask', 'noburn','geom');".format(config.DBschema, collectionDate, config.get_sql_interval(), int(config.SpatialProximity))
+    query_text = "SELECT VIIRS_threshold_2_fireevents('{0}', '{1}', '{2}', {3});".format(config.DBschema, collectionDate, config.get_sql_interval(), int(config.SpatialProximity))
     execute_query(config,query_text)
 
 def execute_simple_confirm_burns(config, collectionDate):

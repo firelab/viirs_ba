@@ -6,8 +6,7 @@ CREATE OR REPLACE FUNCTION viirs_threshold_2_fireevents(
     varchar(200),
     timestamp without time zone,
     interval,
-    integer,
-    text, text, text)
+    integer)
   RETURNS void AS
 $BODY$
 DECLARE 
@@ -15,15 +14,11 @@ DECLARE
   collection timestamp without time zone := $2; 
   recent interval := $3;
   distance integer := $4; 
-  landcover_schema text := $5;
-  no_burn_table text := $6 ;
-  no_burn_geom text := $7 ;
   added record ; 
   confirm_query text ; 
   confirm_point text ; 
   insert_confirmed text ; 
   update_collection text;
-  no_burn_res real ; 
 BEGIN
 
   RAISE NOTICE 'Interval = %', recent ;
@@ -53,9 +48,7 @@ BEGIN
              'ST_DWithin(ST_Transform(t.geom, 102008), fe.geom, $3) AND ' || 
              
              -- mask out nonburnable
-             '(ST_Transform(t.geom, 96630) && mask.rast AND ' ||
-               'NOT ST_DWithin(ST_Transform(t.geom, 96630), mask.'
-                  ||quote_ident(no_burn_geom)|| ', $4)) ' ||
+             '(NOT masked) ' ||
 
         'GROUP BY t.fid) confirmed ' ||
      'WHERE fe.fid = fe_fid AND ' ||
@@ -79,14 +72,9 @@ BEGIN
       'FROM confirmed_pts cp ' || 
       'WHERE t.fid = cp.t_fid' ; 
 
-  -- determine resolution of "no-burn" mask
-  EXECUTE 'SELECT scale_x/2 FROM raster_columns WHERE r_table_schema = ' || 
-     quote_literal(landcover_schema) || 
-     ' AND r_table_name = ' || quote_literal(no_burn_table) || 
-      ' AND r_raster_column = ' || quote_literal('rast') INTO no_burn_res ;
 
   EXECUTE 'CREATE TEMPORARY TABLE confirmed_pts AS ' || confirm_query
-      USING collection, recent, distance, no_burn_res ; 
+      USING collection, recent, distance ; 
       
   EXECUTE 'SELECT count(*) as c FROM confirmed_pts' INTO added ; 
 
