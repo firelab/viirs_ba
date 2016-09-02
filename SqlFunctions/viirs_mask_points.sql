@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION viirs_mask_points(
 $BODY$
 DECLARE
   schema varchar(200) := $1;
-  point_tbl text := $2 
+  point_tbl text := $2 ;
   landcover_schema text := $3;
   no_burn_table text := $4 ; 
   no_burn_geom text := $5 ; 
@@ -16,6 +16,7 @@ DECLARE
   dumint int ;  
 
 BEGIN
+
   -- delete and recreate masked column
   EXECUTE 'ALTER TABLE ' || quote_ident(schema) || '.' ||
            quote_ident(point_tbl) || 
@@ -35,13 +36,16 @@ BEGIN
      quote_ident(landcover_schema)||'.'||quote_ident(no_burn_table)||' nb ' || 
      'LIMIT 1' INTO dumint ; 
         
+  -- reproject and index the points
+  PERFORM viirs_nlcd_geom(schema, point_tbl, dumint) ;
+
   -- Populate the masked column
-  EXECUTE 'UPDATE ' || quote_ident(schema) || '.'||quote_ident(points_tbl)|| ' a '  || 
+  EXECUTE 'UPDATE ' || quote_ident(schema) || '.'||quote_ident(point_tbl)|| ' a '  || 
            'SET masked=TRUE ' ||
            'FROM ' ||quote_ident(landcover_schema)||'.'||quote_ident(no_burn_table)||' nb ' || 
-           'WHERE ST_Transform(a.geom, $1) && nb.rast AND ' ||
-        'ST_DWithin(ST_Transform(a.geom, $1), nb.geom, $2)' 
-    USING dumint, no_burn_res ; 
+           'WHERE a.geom_nlcd && nb.rast AND ' ||
+        'ST_DWithin(a.geom_nlcd, nb.geom, $1)' 
+    USING  no_burn_res ; 
 END
 $BODY$
   LANGUAGE plpgsql VOLATILE

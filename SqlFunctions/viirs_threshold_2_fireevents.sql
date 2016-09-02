@@ -32,8 +32,7 @@ BEGIN
         '(SELECT t.fid as t_fid, MAX(fe.fid) AS fe_fid ' || 
          'FROM ' || quote_ident(schema) || '.fire_events fe, ' || 
              quote_ident(schema) || '.fire_collections fc, ' ||
-             quote_ident(schema) || '.threshold_burned t, ' ||
-             quote_ident(landcover_schema)||'.'||quote_ident(no_burn_table)||' mask ' ||
+             quote_ident(schema) || '.threshold_burned t ' ||
          'WHERE ' ||
              -- glue and seed criteria
              'fe.collection_id = fc.fid AND ' || 

@@ -68,9 +68,9 @@ BEGIN
       
   -- loops over all candidate active fire pixels from the specified collection.
   loop_query := 'SELECT a.* FROM ' || quote_ident(schema)||'.active_fire a ' ||
-                'WHERE collection_date = $1 AND NOT masked' USING collection ; 
+                'WHERE collection_date = $1 AND NOT masked' ; 
 
-  FOR a_row IN EXECUTE loop_query 
+  FOR a_row IN EXECUTE loop_query USING collection 
   LOOP
   EXECUTE select_collection INTO dumrec USING collection, recent, distance, a_row.geom ;
   IF dumrec IS NOT NULL THEN 

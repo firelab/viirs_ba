@@ -12,8 +12,8 @@ def delete_confirmed(config) :
 
 def mask_points(config) : 
     """apply landcover mask to active_fire and threshold burned"""
-    vt.execute_query(config, "SELECT viirs_mask_points('{0}','active_fire','landcover','noburn','geom')")
-    vt.execute_query(config, "SELECT viirs_mask_points('{0}','threshold_burned','landcover','noburn','geom')")
+    vt.execute_query(config, "SELECT viirs_mask_points('{0}','active_fire','landmask','noburn','geom')".format(config.DBschema))
+    vt.execute_query(config, "SELECT viirs_mask_points('{0}','threshold_burned','landmask','noburn','geom')".format(config.DBschema))
     
 # Convert to a datetime object
 def image_date_time(imagedate):
