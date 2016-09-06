@@ -34,7 +34,7 @@ def all_fom(database_name, workers=12) :
                            workers=workers,
                            spatial_filter=True,
                            mask_tbl='bobafet14')
-
+#
 if __name__ == "__main__" :
     if len(sys.argv) != 2 : 
         print "Usage: {0} database_name".format(sys.argv[0])
