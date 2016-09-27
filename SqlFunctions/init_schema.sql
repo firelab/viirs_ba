@@ -239,7 +239,7 @@ $BODY$
        quote_ident(name) || '.active_fire USING gist (geom)';
     
     EXECUTE 'CREATE INDEX ' || quote_ident('idx_'||name||'_active_fire_geom_nlcd') || 
-            ' ON ' || quote_ident(name) || '.active_fire ' USING GIST (geom_nlcd)' ;
+           ' ON ' || quote_ident(name) || '.active_fire USING GIST (geom_nlcd)' ;
     
     --
     -- Name: idx_fire_events_geom; Type: INDEX; Schema: public; Owner: postgres
@@ -256,7 +256,7 @@ $BODY$
     EXECUTE 'CREATE INDEX ' || quote_ident('idx_' || name || '_threshold_burned_geom') || ' ON ' || 
        quote_ident(name) || '.threshold_burned USING gist (geom)';
     EXECUTE 'CREATE INDEX ' || quote_ident('idx_'||name||'_threshold_burned_geom_nlcd') || 
-            ' ON ' || quote_ident(name) || '.threshold_burned ' USING GIST (geom_nlcd)' ;
+            ' ON ' || quote_ident(name) || '.threshold_burned USING GIST (geom_nlcd)' ;
 
     --
     -- Name: idx_fire_collections_last_update; Type: INDEX; Schema: public; Owner: postgres

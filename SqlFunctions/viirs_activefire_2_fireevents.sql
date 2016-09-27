@@ -17,8 +17,8 @@ DECLARE
   collection timestamp without time zone := $2; 
   recent interval := $3;
   distance integer := $4; 
-  lm_schema := $5 ; 
-  lm_table  := $6 ;  
+  lm_schema text := $5 ; 
+  lm_table  text:= $6 ;  
 --   a_row active_fire%rowtype;
   a_row RECORD;
   ret RECORD;
