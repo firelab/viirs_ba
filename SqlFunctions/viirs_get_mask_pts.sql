@@ -1,7 +1,7 @@
 -- given a schema/table/column containing raster data, creates a 
 -- geometry multipoint column contaning pixel centers for only those 
 -- points where the pixel value == 1. (mask is true) 
-CREATE OR REPLACE FUNCTION viirs_get_mask_pts(schema text, tbl text, rast text, geom text, srid int) 
+CREATE OR REPLACE FUNCTION viirs_get_mask_pts(schema text, tbl text, rast text, geom text, srid int, mask_val int = 1) 
    RETURNS void AS
 $BODY$
   BEGIN
@@ -21,7 +21,7 @@ $BODY$
 		       ') as pixel ' || 
 		'FROM ' || quote_ident(schema) || '.' || quote_ident(tbl) || 
 		') dummy ' || 
-		'WHERE (pixel).val=1 ' || 
+		'WHERE (pixel).val=' || mask_val || ' ' || 
 		'GROUP BY rid) ' || 
 	  'UPDATE ' || quote_ident(schema) || '.' || quote_ident(tbl) || ' a ' ||
 	  'SET ' || quote_ident(geom) || ' = p.multi_p ' || 
@@ -36,5 +36,5 @@ $BODY$
 $BODY$ 
   LANGUAGE plpgsql VOLATILE
   COST 100 ; 
-ALTER FUNCTION viirs_get_mask_pts(schema text, tbl text, rast text, geom text, srid int)
+ALTER FUNCTION viirs_get_mask_pts(schema text, tbl text, rast text, geom text, srid int, mask_val int )
   OWNER to postgres ;
