@@ -17,7 +17,9 @@ $BODY$
         'geom geometry(Point,4326), ' || 
         'event_fid integer, ' || 
         'pixel_size integer NOT NULL, ' ||
-        'band_i_m character(1) NOT NULL)';
+        'band_i_m character(1) NOT NULL, ' ||
+        'masked boolean DEFAULT FALSE, ' || 
+        'geom_nlcd geometry)';
     
     
     EXECUTE 'ALTER TABLE ' || quote_ident(name) || '.active_fire OWNER TO postgres';
@@ -132,7 +134,9 @@ $BODY$
         'geom geometry(Point,4326), ' ||
         'confirmed_burn boolean DEFAULT false, ' ||
         'pixel_size integer NOT NULL, ' ||
-        'band_i_m character(1) NOT NULL)';
+        'band_i_m character(1) NOT NULL, ' || 
+        'masked boolean DEFAULT FALSE, ' ||
+        'geom_nlcd geometry)';
     
     
     EXECUTE 'ALTER TABLE ' || quote_ident(name) || '.threshold_burned OWNER TO postgres';
@@ -234,6 +238,8 @@ $BODY$
     EXECUTE 'CREATE INDEX ' || quote_ident('idx_' || name || '_active_fire_geom') || ' ON ' || 
        quote_ident(name) || '.active_fire USING gist (geom)';
     
+    EXECUTE 'CREATE INDEX ' || quote_ident('idx_'||name||'_active_fire_geom_nlcd') || 
+            ' ON ' || quote_ident(name) || '.active_fire ' USING GIST (geom_nlcd)' ;
     
     --
     -- Name: idx_fire_events_geom; Type: INDEX; Schema: public; Owner: postgres
@@ -249,6 +255,8 @@ $BODY$
     
     EXECUTE 'CREATE INDEX ' || quote_ident('idx_' || name || '_threshold_burned_geom') || ' ON ' || 
        quote_ident(name) || '.threshold_burned USING gist (geom)';
+    EXECUTE 'CREATE INDEX ' || quote_ident('idx_'||name||'_threshold_burned_geom_nlcd') || 
+            ' ON ' || quote_ident(name) || '.threshold_burned ' USING GIST (geom_nlcd)' ;
 
     --
     -- Name: idx_fire_collections_last_update; Type: INDEX; Schema: public; Owner: postgres

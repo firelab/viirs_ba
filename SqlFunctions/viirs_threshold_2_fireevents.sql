@@ -6,7 +6,9 @@ CREATE OR REPLACE FUNCTION viirs_threshold_2_fireevents(
     varchar(200),
     timestamp without time zone,
     interval,
-    integer)
+    integer,
+    text DEFAULT NULL,
+    text DEFAULT NULL)
   RETURNS void AS
 $BODY$
 DECLARE 
@@ -14,6 +16,8 @@ DECLARE
   collection timestamp without time zone := $2; 
   recent interval := $3;
   distance integer := $4; 
+  lm_schema text := $5 ; 
+  lm_table text := $6 ;
   added record ; 
   confirm_query text ; 
   confirm_point text ; 
@@ -71,6 +75,11 @@ BEGIN
       'FROM confirmed_pts cp ' || 
       'WHERE t.fid = cp.t_fid' ; 
 
+  -- mask threshold points by burn mask
+  IF lm_schema IS NOT NULL THEN 
+    PERFORM viirs_collection_mask_points(schema, 'threshold_burned', lm_schema,
+               lm_table, 'geom', collection) ; 
+  END IF ;
 
   EXECUTE 'CREATE TEMPORARY TABLE confirmed_pts AS ' || confirm_query
       USING collection, recent, distance ; 

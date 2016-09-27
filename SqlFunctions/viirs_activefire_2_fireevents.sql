@@ -6,14 +6,19 @@ CREATE OR REPLACE FUNCTION viirs_activefire_2_fireevents(
     varchar(200),
     timestamp without time zone,
     interval,
-    integer)
+    integer,
+    text DEFAULT NULL,
+    text DEFAULT NULL
+    )
   RETURNS void AS
 $BODY$
 DECLARE
   schema varchar(200) = $1; 
   collection timestamp without time zone := $2; 
   recent interval := $3;
-  distance integer := $4;  
+  distance integer := $4; 
+  lm_schema := $5 ; 
+  lm_table  := $6 ;  
 --   a_row active_fire%rowtype;
   a_row RECORD;
   ret RECORD;
@@ -70,6 +75,12 @@ BEGIN
   loop_query := 'SELECT a.* FROM ' || quote_ident(schema)||'.active_fire a ' ||
                 'WHERE collection_date = $1 AND NOT masked' ; 
 
+  -- masks active fire points in the current collection by the landmask
+  IF lm_schema IS NOT NULL THEN
+    PERFORM viirs_collection_mask_points(schema, 'active_fire', lm_schema, 
+                             lm_table, 'geom', collection) ; 
+  END IF ; 
+  
   FOR a_row IN EXECUTE loop_query USING collection 
   LOOP
   EXECUTE select_collection INTO dumrec USING collection, recent, distance, a_row.geom ;
@@ -89,5 +100,5 @@ END
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
-ALTER FUNCTION viirs_activefire_2_fireevents(varchar(200), timestamp without time zone, interval, integer)
+ALTER FUNCTION viirs_activefire_2_fireevents(varchar(200), timestamp without time zone, interval, integer, text, text)
   OWNER TO postgres;
