@@ -13,7 +13,7 @@ DECLARE
   landcover_schema text := $3;
   no_burn_table text := $4 ; 
   no_burn_geom text := $5 ; 
-  collection := $6 ;
+  collection timestamp without time zone := $6 ;
   no_burn_res real ;
   dumint int ;  
 
