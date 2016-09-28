@@ -71,6 +71,10 @@ class VIIRSConfig (object) :
             merged.south = template.south
             merged.east  = template.east
             merged.west  = template.west
+            
+        if template.has_burnmask() : 
+            merged.BMschema = template.BMschema
+            merged.BMtable  = template.BMtable
 
         # handle changes
         if runid is not None : 
@@ -169,6 +173,10 @@ class VIIRSConfig (object) :
             target.south = ini.getfloat('GeogWindow','South')
             target.east  = ini.getfloat('GeogWindow','East')
             target.west  = ini.getfloat('GeogWindow','West')
+            
+        if ini.has_section('Burnmask') : 
+            target.BMschema = ini.get('Burnmask', 'schema')
+            target.BMtable  = ini.get('Burnmask', 'table')
         
         target.parse_schema()
         target.sort_dates()
@@ -261,7 +269,12 @@ class VIIRSConfig (object) :
             ini.set("GeogWindow", "North", fltfmt.format(self.north)) 
             ini.set("GeogWindow", "South", fltfmt.format(self.south)) 
             ini.set("GeogWindow", "East", fltfmt.format(self.east)) 
-            ini.set("GeogWindow", "West", fltfmt.format(self.west)) 
+            ini.set("GeogWindow", "West", fltfmt.format(self.west))
+            
+        if self.has_burnmask() : 
+             ini.add_section("Burnmask")
+             ini.set("Burnmask", "schema", self.BMschema)
+             ini.set("Burnmask", "table",  self.BMtable) 
         
         return ini
         
@@ -278,6 +291,10 @@ class VIIRSConfig (object) :
     def has_window(self) : 
         """checks for presence of geographic window on this object"""
         return hasattr(self,"north")
+        
+    def has_burnmask(self) : 
+        """checks for the presence of burnmask properties on this object"""
+        return hasattr(self, "BMschema")
         
     def get_vector(self) : 
         """returns the vector representation of the numeric parameters
