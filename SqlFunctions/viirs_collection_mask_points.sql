@@ -18,8 +18,21 @@ DECLARE
   dumint int ;  
 
 BEGIN
+
+  -- determine the srid of the landcover mask for projection
+  EXECUTE 'SELECT ST_SRID(rast) FROM ' || 
+     quote_ident(landcover_schema)||'.'||quote_ident(no_burn_table)||' nb ' || 
+     'LIMIT 1' INTO dumint ; 
+
   -- reproject and index the points
   PERFORM viirs_collection_nlcd_geom(schema, point_tbl, dumint, collection) ;
+
+
+  -- determine resolution of "no-burn" mask
+  EXECUTE 'SELECT scale_x/2 FROM raster_columns WHERE r_table_schema = ' || 
+      quote_literal(landcover_schema) || 
+      ' AND r_table_name = ' || quote_literal(no_burn_table) || 
+      ' AND r_raster_column = ' || quote_literal('rast') INTO no_burn_res ;
 
   -- Populate the masked column
   EXECUTE 'UPDATE ' || quote_ident(schema) || '.'||quote_ident(point_tbl)|| ' a '  || 
