@@ -5,7 +5,6 @@ run before turning this code loose on the directory structure."""
 import os
 import pandas as pd
 import viirs_config as vc
-import viirs_brute as vb
 
 def make_int_from_dir(dirname) : 
     return int(dirname[6:])
@@ -37,7 +36,7 @@ def write_missing_ini(template, spreadsheet) :
     missing = select_zero_fom(spreadsheet)
     t = vc.VIIRSConfig.load(template)
 
-    config_list = vb.csv_vectors(t, missing) 
+    config_list = vc.VIIRSConfig.batch(t, missing) 
 
     for cfg in config_list : 
         cfg.save(os.path.join(cfg.DBschema, "derived.ini"))

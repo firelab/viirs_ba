@@ -101,7 +101,7 @@ class VIIRSConfig (object) :
         """initializes an array of configuration objects from a table of parameter values.
         
         template should be a VIIRSConfig object.
-        spreadsheet should be a dataframe
+        spreadsheet should be a Pandas dataframe
         
         Each row in the spreadsheet is taken to be a vector of parameters which 
         can serve as input to merge_into_template(). The column names for
@@ -111,14 +111,27 @@ class VIIRSConfig (object) :
         merging each row of vector data in the spreadsheet with the template 
         configuration object.
         """
-        num_rows = spreadsheet.shape[0]
+        # setup
+        ref_vector = template.get_vector()
+        nrows = spreadsheet.shape[0]
         config_list = [ ]
-        for i in range(num_rows) : 
-            vector = spreadsheet.iloc[i]
-            config_list.append(cls.merge_into_template(vector, template))
-            
+
+        # loop over all the rows in the table
+        for i_row in range(nrows) : 
+            row = spreadsheet.iloc[i_row, :]
+            newvals = {} 
+            for p in vector_param_names : 
+                if p in int_vector_params : 
+                    newvals[p] = int(row[p])
+                else : 
+                    newvals[p] = row[p]
+            i_vec = ref_vector._replace(**newvals)
+            i_cfg = cls.merge_into_template(i_vec, template, runid=int(row["run_id"]))
+            config_list.append(i_cfg)
+
         return config_list
-        
+
+
     @classmethod
     def load(cls, filename) : 
         """Loads an ini file and creates a configuration object"""

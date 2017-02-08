@@ -21,30 +21,6 @@ def inc_idx( idx, maxval) :
         idx[-1]=0
         
 
-def csv_vectors(template, table, params=vc.vector_param_names,cls=vc.VIIRSConfig) : 
-    """converts the template+vecors in csv format to an array of 
-    configuration objects."""
-
-    
-    # setup
-    ref_vector = template.get_vector()
-    nrows = table.shape[0]
-    config_list = [ ]
-
-    # loop over all the rows in the table
-    for i_row in range(nrows) : 
-        row = table.iloc[i_row, :]
-        newvals = {} 
-        for p in params : 
-            if p in vc.int_vector_params : 
-                newvals[p] = int(row[p])
-            else : 
-                newvals[p] = row[p]
-        i_vec = ref_vector._replace(**newvals)
-        i_cfg = cls.merge_into_template(i_vec, template, runid=int(row["run_id"]))
-        config_list.append(i_cfg)
-
-    return config_list
 
 def reflectance_deltas(template, delta, cls=vc.SequentialVIIRSConfig) :
     """ 
@@ -139,7 +115,7 @@ if __name__ == "__main__":
     # load in the template and create the plan of work
     template_ini = vc.VIIRSConfig.load(sys.argv[1])
     #table = pd.read_csv(sys.argv[2])
-    #p = csv_vectors(template_ini, table)
+    #p = vc.VIIRSConfig.batch(template_ini, table)
     p = reflectance_deltas(template_ini, 0.02)    
     
     # save out the plan of work
