@@ -53,7 +53,7 @@ def copy_data(configs, master_schema='master') :
     af_columns = 'fid, latitude, longitude, collection_date, geom, event_fid, pixel_size, band_i_m, masked, geom_nlcd'
     tb_columns = 'fid, latitude, longitude, collection_date, geom, confirmed_burn, pixel_size, band_i_m, masked, geom_nlcd'
 
-    copy_query = 'INSERT INTO {tgt_schema}.{table}({columns}) SELECT {columns} FROM {master_schema}.{table}'
+    copy_query = 'INSERT INTO "{tgt_schema}".{table}({columns}) SELECT {columns} FROM "{master_schema}".{table}'
 
     for cfg in configs : 
         # copy active fire
