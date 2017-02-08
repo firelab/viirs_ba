@@ -275,7 +275,7 @@ $BODY$
 	  'GROUP BY b.rid, b.rast' USING distance;  
 
 	EXECUTE 'UPDATE ' || quote_ident(schema) || '.fire_events_raster ' ||
-	    'SET rast_375 = ST_SetBandNoDataValue(rast_375, 3.)' ;
+	    'SET rast_375_doy = ST_SetBandNoDataValue(rast_375_doy, 0.)' ;
 	      
     END
 $BODY$ 
