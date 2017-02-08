@@ -230,3 +230,58 @@ $BODY$
 ALTER FUNCTION viirs_rasterize_filter(schema text, col text, 
                                    gt_schema text, mask_tbl text)
 OWNER to postgres ;
+
+
+
+CREATE OR REPLACE FUNCTION viirs_rasterize_375_mindoy(schema text, tbl text,
+                           gt_schema text, 
+                           rast_table text, 
+                           geom_table text,
+                           distance float) 
+   RETURNS void AS
+$BODY$
+    DECLARE 
+       dist_clause text ; 
+       filter_tbl  text ;
+    BEGIN
+
+	EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(schema) || '.fire_events_raster' ;
+	
+	IF distance <> -1 THEN 
+	  dist_clause := 'ST_DWithin(a.geom_nlcd, c.geom, $1) AND ' ||
+	                 'ST_Intersects(c.geom, b.rast) AND ' ;
+          filter_tbl := ', '||quote_ident(gt_schema)||'.'||quote_ident(geom_table)||' c ' ;
+	ELSE
+	  dist_clause := ' ' ;
+	  filter_tbl := ' ' ;
+	END IF ; 
+
+        EXECUTE 'CREATE TABLE ' || quote_ident(schema) || '.fire_events_raster AS ' ||
+          'SELECT b.rid, ' ||
+	     'ST_MapAlgebra(' ||
+	        'ST_Union(ST_AsRaster(geom_nlcd, b.rast, ' || quote_literal('16BUI') || ', ' ||
+				'EXTRACT(DOY FROM a.collection_date)), ' ||
+		                quote_literal('MIN') || '), ' ||
+		'ST_AddBand(ST_MakeEmptyRaster(b.rast), ' || quote_literal('16BUI') || '::text), ' ||
+		quote_literal('[rast1]') || ', ' || 
+		quote_literal('16BUI') || ', ' || 
+		quote_literal('SECOND') || ') rast_375_doy ' ||
+	  'FROM ' || quote_ident(schema)||'.'||quote_ident(tbl)|| ' a, ' || 
+	        quote_ident(gt_schema) || '.' || quote_ident(rast_table) || ' b ' || 
+	        filter_tbl || 
+	  'WHERE ST_Intersects(a.geom_nlcd, b.rast) AND ' ||
+	        dist_clause ||
+	        'pixel_size = 375 ' ||  
+	  'GROUP BY b.rid, b.rast' USING distance;  
+
+	EXECUTE 'UPDATE ' || quote_ident(schema) || '.fire_events_raster ' ||
+	    'SET rast_375 = ST_SetBandNoDataValue(rast_375, 3.)' ;
+	      
+    END
+$BODY$ 
+  LANGUAGE plpgsql VOLATILE
+  COST 100 ; 
+ALTER FUNCTION viirs_rasterize_375_mindoy(schema text, tbl text, gt_schema text, 
+                          rast_table text, geom_table text, distance float)
+  OWNER to postgres ;
+
