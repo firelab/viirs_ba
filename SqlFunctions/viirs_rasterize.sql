@@ -260,12 +260,15 @@ $BODY$
           'SELECT b.rid, ' ||
 	     'ST_MapAlgebra(' ||
 	        'ST_Union(ST_AsRaster(geom_nlcd, b.rast, ' || quote_literal('16BUI') || ', ' ||
-				'EXTRACT(DOY FROM a.collection_date)), ' ||
+				'EXTRACT(DOY FROM a.collection_date), 367), ' ||
 		                quote_literal('MIN') || '), ' ||
 		'ST_AddBand(ST_MakeEmptyRaster(b.rast), ' || quote_literal('16BUI') || '::text), ' ||
 		quote_literal('[rast1]') || ', ' || 
 		quote_literal('16BUI') || ', ' || 
-		quote_literal('SECOND') || ') rast_375_doy ' ||
+		quote_literal('SECOND') || ', ' ||
+                quote_literal('367')    || ', ' || 
+                quote_literal('[rast1]')    || ', ' || 
+                quote_literal('367')    || ') rast_375_doy ' ||
 	  'FROM ' || quote_ident(schema)||'.'||quote_ident(tbl)|| ' a, ' || 
 	        quote_ident(gt_schema) || '.' || quote_ident(rast_table) || ' b ' || 
 	        filter_tbl || 
@@ -275,7 +278,7 @@ $BODY$
 	  'GROUP BY b.rid, b.rast' USING distance;  
 
 	EXECUTE 'UPDATE ' || quote_ident(schema) || '.fire_events_raster ' ||
-	    'SET rast_375_doy = ST_SetBandNoDataValue(rast_375_doy, 0.)' ;
+	   'SET rast_375_doy = ST_SetBandNoDataValue(rast_375_doy, 367.)' ;
 	      
     END
 $BODY$ 
