@@ -260,12 +260,15 @@ $BODY$
           'SELECT b.rid, ' ||
 	     'ST_MapAlgebra(' ||
 	        'ST_Union(ST_AsRaster(geom_nlcd, b.rast, ' || quote_literal('16BUI') || ', ' ||
-				'EXTRACT(DOY FROM a.collection_date)), ' ||
+				'EXTRACT(DOY FROM a.collection_date), 367), ' ||
 		                quote_literal('MIN') || '), ' ||
 		'ST_AddBand(ST_MakeEmptyRaster(b.rast), ' || quote_literal('16BUI') || '::text), ' ||
 		quote_literal('[rast1]') || ', ' || 
 		quote_literal('16BUI') || ', ' || 
-		quote_literal('SECOND') || ') rast_375_doy ' ||
+		quote_literal('SECOND') || ', ' ||
+                quote_literal('367')    || ', ' || 
+                quote_literal('[rast1]')    || ', ' || 
+                quote_literal('367')    || ') rast_375_doy ' ||
 	  'FROM ' || quote_ident(schema)||'.'||quote_ident(tbl)|| ' a, ' || 
 	        quote_ident(gt_schema) || '.' || quote_ident(rast_table) || ' b ' || 
 	        filter_tbl || 
@@ -275,7 +278,7 @@ $BODY$
 	  'GROUP BY b.rid, b.rast' USING distance;  
 
 	EXECUTE 'UPDATE ' || quote_ident(schema) || '.fire_events_raster ' ||
-	    'SET rast_375 = ST_SetBandNoDataValue(rast_375, 3.)' ;
+	   'SET rast_375_doy = ST_SetBandNoDataValue(rast_375_doy, 367.)' ;
 	      
     END
 $BODY$ 
@@ -283,5 +286,127 @@ $BODY$
   COST 100 ; 
 ALTER FUNCTION viirs_rasterize_375_mindoy(schema text, tbl text, gt_schema text, 
                           rast_table text, geom_table text, distance float)
+  OWNER to postgres ;
+
+CREATE OR REPLACE FUNCTION viirs_rasterize_750_mindoy(schema text, tbl text,
+                           gt_schema text, 
+                           rast_table text, 
+                           geom_table text, 
+                           distance float) 
+   RETURNS void AS
+$BODY$
+    DECLARE 
+        dist_clause text ; 
+        filter_tbl text ;
+    BEGIN
+
+	EXECUTE 'ALTER TABLE ' || quote_ident(schema) || '.fire_events_raster ' ||
+	        'DROP COLUMN IF EXISTS rast_750_doy'  ; 
+
+	EXECUTE 'ALTER TABLE ' || quote_ident(schema) || '.fire_events_raster ' ||
+	        'ADD COLUMN rast_750_doy raster'  ; 
+
+    DISCARD TEMP ;
+    CREATE TEMPORARY TABLE newrasters (rid integer, rast_750_doy raster) ; 
+    
+    IF distance <> -1 THEN 
+        dist_clause := 'ST_DWithin(a.geom_nlcd, c.geom, $1) AND ' ||
+                       'ST_Intersects(c.geom, b.rast) AND ' ;
+        filter_tbl := quote_ident(gt_schema)||'.'||quote_ident(geom_table)||' c, ' ;
+    ELSE
+        dist_clause := ' ' ;
+        filter_tbl := ' ' ;
+    END IF ; 
+
+    EXECUTE  'INSERT INTO newrasters ' || 
+      'SELECT b.rid, ST_MapAlgebra(' ||
+		    'ST_Union(ST_AsRaster(a.geom_nlcd, empty_rast_750.rast, '|| 
+                         quote_literal('16BUI') || ', ' ||
+                         'EXTRACT(DOY FROM a.collection_date), 367), ' ||
+		         quote_literal('MIN') || '), empty_rast_750.rast, ' ||
+		    quote_literal('[rast1]') || ', ' || 
+		    quote_literal('16BUI') || ', ' || 
+		    quote_literal('SECOND') || ', ' ||
+                    quote_literal('367')    || ', ' || 
+                    quote_literal('[rast1]')    || ', ' || 
+                    quote_literal('367')    || ') rast_750_doy ' ||
+      'FROM ' || quote_ident(schema)||'.'||quote_ident(tbl)||' a, ' || 
+           quote_ident(gt_schema) || '.' || quote_ident(rast_table) || ' b, ' ||
+           filter_tbl || 
+           '(SELECT rid, ' || 
+	           'St_SetSRID(ST_AddBand(ST_MakeEmptyRaster(ST_Width(rast)/2, ' ||
+		                                  'ST_Height(rast)/2, ' ||
+		                                  'ST_UpperLeftX(rast), ' ||
+		                                  'ST_UpperLeftY(rast), 750), ' ||
+		             quote_literal('8BUI')||'::text), ST_SRID(rast)) as rast ' ||
+            'FROM ' || quote_ident(gt_schema)||'.'||quote_ident(rast_table)||') empty_rast_750 ' ||
+      'WHERE ST_Intersects(a.geom_nlcd, b.rast) AND ' ||
+	            dist_clause ||
+	            'b.rid = empty_rast_750.rid AND ' ||
+	            'pixel_size = 750  ' ||
+      'GROUP BY b.rid, empty_rast_750.rast ' USING distance;
+    
+    EXECUTE 'LOCK TABLE ' || quote_ident(schema) || '.fire_events_raster ' ||
+          'IN EXCLUSIVE MODE' ; 
+    
+    EXECUTE 'UPDATE  ' || quote_ident(schema) || '.fire_events_raster me '
+      'SET rast_750_doy = newrasters.rast_750_doy ' ||
+      'FROM newrasters ' ||
+      'WHERE newrasters.rid = me.rid' ; 
+
+    EXECUTE 'INSERT INTO ' || quote_ident(schema) || '.fire_events_raster ' ||
+       '(rid, rast_750_doy) ' || 
+       'SELECT newrasters.rid, newrasters.rast_750_doy ' || 
+       'FROM newrasters ' || 
+       'LEFT OUTER JOIN ' || quote_ident(schema) || '.fire_events_raster me ' ||
+          'ON (newrasters.rid = me.rid) ' || 
+       'WHERE me.rid IS NULL' ;
+
+    EXECUTE 'UPDATE ' || quote_ident(schema) || '.fire_events_raster ' ||
+	    'SET rast_750_doy = ST_SetBandNoDataValue(rast_750_doy, 367.) ' ||
+            'WHERE rast_750_doy IS NOT NULL' ;
+
+    END
+$BODY$ 
+  LANGUAGE plpgsql VOLATILE
+  COST 100 ; 
+ALTER FUNCTION viirs_rasterize_750_mindoy(schema text, tbl text, 
+               gt_schema text, rast_table text, geom_table text, distance float)
+  OWNER to postgres ;
+
+CREATE OR REPLACE FUNCTION viirs_rasterize_merge_doy(schema text, col text) 
+   RETURNS void AS
+$BODY$
+   BEGIN
+   
+   EXECUTE 'ALTER TABLE ' || quote_ident(schema) || '.fire_events_raster ' ||
+          'DROP COLUMN IF EXISTS ' || quote_ident(col) ;
+
+   EXECUTE 'ALTER TABLE ' || quote_ident(schema) || '.fire_events_raster ' || 
+          'ADD COLUMN ' || quote_ident(col) || ' raster' ;
+
+   EXECUTE 'UPDATE ' || quote_ident(schema) || '.fire_events_raster '||
+          'SET ' || quote_ident(col) || '=rast_375_doy ' ||
+          'WHERE rast_375_doy IS NOT NULL and rast_750_doy IS NULL'; 
+
+   EXECUTE 'UPDATE ' || quote_ident(schema) || '.fire_events_raster ' || 
+          'SET ' || quote_ident(col) || '=ST_Rescale(rast_750_doy, 375., -375) '  ||
+          'WHERE rast_375_doy IS NULL and rast_750_doy IS NOT NULL' ; 
+
+   EXECUTE 'UPDATE ' || quote_ident(schema) || '.fire_events_raster ' || 
+          'SET ' || quote_ident(col) || '=ST_SetBandNoDataValue(' ||
+             'ST_MapAlgebra(rast_375_doy, ST_Rescale(rast_750_doy,375.,-375.), ' ||
+                     quote_literal('least([rast1],[rast2])') ||', '|| 
+                     quote_literal('16BUI') ||','||
+                     quote_literal('FIRST') || ', ' || 
+                     quote_literal('[rast2]') || ', ' ||
+                     quote_literal('[rast1]') || ', ' ||
+                     quote_literal('367') || '), 367.0) ' || 
+           'WHERE rast_375_doy IS NOT NULL and rast_750_doy IS NOT NULL' ;     
+   END
+$BODY$ 
+  LANGUAGE plpgsql VOLATILE
+  COST 100 ; 
+ALTER FUNCTION viirs_rasterize_merge_doy(schema text, col text)
   OWNER to postgres ;
 
