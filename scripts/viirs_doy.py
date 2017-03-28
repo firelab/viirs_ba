@@ -38,7 +38,7 @@ def create_fire_events_raster(config, tbl,
     vt.execute_query(config, query)
               
 def create_events_view(config,year) : 
-    """creates a view of the fire_events table, only showing 2013 data."""
+    """creates a view of the fire_events table, only showing a single year's data."""
     view_name = 'fire_events_{0}'.format(year)
     query="""CREATE OR REPLACE VIEW "{0}".{1} AS
           SELECT * FROM "{0}".fire_events
@@ -54,7 +54,6 @@ def export_raster(config, raster_tbl, raster_col='rast') :
     connstr = 'PG:dbname=\'{0}\' user=\'{1}\' password=\'{6}\' host=\'{5}\' schema=\'\\"{2}\\"\' table=\'{3}\' column=\'{4}\' mode=2'.format(config.DBname, config.DBuser, config.DBschema, raster_tbl, raster_col, config.DBhost, config.pwd)
 
     outfile = os.path.join(config.ShapePath, '{0}.tif'.format(raster_tbl))
-    cmd = r'/usr/bin/gdal_translate -ot UInt16 -of GTiff -co "COMPRESS=DEFLATE" {0} "{1}"'.format(connstr, outfile)
     args = [
        '/usr/bin/gdal_translate',
        '-ot', 'UInt16',
@@ -62,7 +61,7 @@ def export_raster(config, raster_tbl, raster_col='rast') :
        '-co', 'COMPRESS=DEFLATE',
        '-co', 'PREDICTOR=2',
        connstr,
-       '{0}'.format(outfile) ]
+       outfile ]
     sub.call(args)
     
     
