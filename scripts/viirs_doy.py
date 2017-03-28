@@ -69,8 +69,10 @@ def export_raster(config, raster_tbl, raster_col='rast') :
 def rasterize(config) :  
     create_events_view(config,2013)
     create_fire_events_raster(config, 'fire_events_2013', 'gt', 'burnmask13', '', result_tbl='rast_doy_2013')
+    export_raster(config, 'rast_doy_2013')
 
     create_events_view(config,2014)
     create_fire_events_raster(config, 'fire_events_2014', 'gt', 'burnmask13', '', result_tbl='rast_doy_2014')
+    export_raster(config, 'rast_doy_2014')
 
     

@@ -114,9 +114,9 @@ if __name__ == "__main__":
 
     # load in the template and create the plan of work
     template_ini = vc.VIIRSConfig.load(sys.argv[1])
-    #table = pd.read_csv(sys.argv[2])
-    #p = vc.VIIRSConfig.batch(template_ini, table)
-    p = reflectance_deltas(template_ini, 0.02)    
+    table = pd.read_csv(sys.argv[2])
+    p = vc.VIIRSConfig.batch(template_ini, table)
+    #p = reflectance_deltas(template_ini, 0.02)    
     
     # save out the plan of work
     run_info_file = "{0}_schema_info.csv".format(template_ini.DBname)
