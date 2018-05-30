@@ -338,7 +338,7 @@ def output_shape_files(config) :
     print command
     subprocess.call(command, shell = True)
 
-def ba_threshold(config, m07, m08, m10, m11, af, geo) :
+def ba_threshold(config, m07, m08, m10, m11,geo) :
     """perform the thresholding and return a conditional array representing a mask of 
     burned area detections."""
     M07ReflArray = m07.get_cor_refl()
@@ -364,7 +364,7 @@ def ba_threshold(config, m07, m08, m10, m11, af, geo) :
         (M11ReflArray > config.M11LB) &
         (np.where(M11ReflArray != 0,((M08ReflArray-config.RthSub)/M11ReflArray),config.RthLB-1) >= config.RthLB) &
         (np.where(M11ReflArray != 0,((M08ReflArray-config.RthSub)/M11ReflArray),config.Rth+1) < config.Rth) &
-        (af.get_non_fire()) &
+        #(af.get_non_fire()) &
         (geo.day_pixels(config.MaxSolZen)) &   #this should supress night pixels
         m07.qa & m08.qa & m10.qa & m11.qa
         ] = 1
@@ -435,7 +435,7 @@ class FileSet (object) :
         """locates an hdf4/5 file in the basedir having a specific prefix,
         returns the full pathname to the file"""
         h5 = glob.glob(os.path.join(basedir, 
-           "{0}_{1}_e???????_b00001_c????????????????????_all-_dev.{2}".format(
+           "{0}_{1}_e???????_b?????_c????????????????????_noaa_ops.{2}".format(
               prefix,self.get_imagedate(), extension)))[0]
         return h5
         
@@ -695,8 +695,8 @@ class ActiveFire375 (ActiveFire) :
 
 def run(config):
     
-    if config.DatabaseOut == "y":
-        initialize_schema_for_postgis(config)
+    #if config.DatabaseOut == "y":
+    #    initialize_schema_for_postgis(config)
 
     #Loop through BaseDir, look for h5s and load arrays
     count = 0
@@ -726,11 +726,13 @@ def run(config):
             # Read VF375
             af_375 = ActiveFire375.load(files['VF375_npp'])
         
-        # Read AVAFO
-        af_750 = ActiveFire750.load(files['AVAFO_npp'])            
-        
+        if config.use750af.lower() == "y":
+            # Read AVAFO
+            af_750 = ActiveFire750.load(files['AVAFO_npp'])            
+ 
         # Set up Burned Area Conditional array: BaCon
-        BaCon = ba_threshold(config, m07, m08, m10, m11, af_750, geo_750)
+        #BaCon = ba_threshold(config, m07, m08, m10, m11, af_750, geo_750)
+        BaCon = ba_threshold(config, m07, m08, m10, m11, geo_750)
 
         # Apply geographic window, if specified
         geo_750.apply_window(config,BaCon)
@@ -842,8 +844,8 @@ def run(config):
             #execute_check_4_activity(config, date_4db)
             
             # active fire to fires events 
-            print "\nCopy active fire to fire events and create collections"
-            execute_active_fire_2_events(config, fileset.get_sql_date())
+            #print "\nCopy active fire to fire events and create collections"
+            #execute_active_fire_2_events(config, fileset.get_sql_date())
             #vacuum_analyze(config,"active_fire")
     
             # simple confirm threshold burns 
