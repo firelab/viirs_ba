@@ -706,7 +706,7 @@ def run(config):
         count  = count + 1
         print "Processing number:", count, "of:", len(config.SortedImageDates)
         print ImageDate + '\n'
-        
+ 
         fileset = FileSet.from_imagedate(ImageDate)
         files = fileset.get_file_names(config.BaseDir)
 
